@@ -57,4 +57,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems privately: see 
 
 ## License
 
-MIT
+Rata is free software under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
+
+In short: you can use, study, change and share Rata, also for commercial use. If you change it and run it as a service for other people, you must publish your changed source code under the same license. Keep the copyright and license notices.
+
+The name "Rata" and the logo are not covered by this license. See [TRADEMARK.md](TRADEMARK.md).

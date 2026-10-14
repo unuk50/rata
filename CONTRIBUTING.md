@@ -7,6 +7,12 @@ Thank you for your help.
 3. Run `pnpm lint`, `pnpm typecheck` and `pnpm test` before you push.
 4. Open a pull request. CodeRabbit reviews each pull request. A maintainer merges it.
 
+## Sign your commits (DCO)
+
+We use the [Developer Certificate of Origin](https://developercertificate.org/). Add a sign-off line to each commit with `git commit -s`. The line says that you wrote the change, or have the right to submit it, under the project license.
+
+By contributing, you agree that your contribution is licensed under AGPL-3.0-only.
+
 ## Rules
 
 - Money is always an integer in minor units with a currency code. Never use floats for stored amounts.
