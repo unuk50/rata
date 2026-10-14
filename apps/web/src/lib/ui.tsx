@@ -6,10 +6,10 @@ import { dismissToast, useToast } from "./toast";
 
 export const CURRENCIES: string[] = (() => {
   const common = [
+    "INR",
     "USD",
     "EUR",
     "GBP",
-    "INR",
     "AUD",
     "CAD",
     "SGD",
@@ -36,28 +36,9 @@ export const CURRENCIES: string[] = (() => {
   return [...common, ...all.filter((c) => !common.includes(c))];
 })();
 
+/** Rata is for India first, so a new group starts in INR. Trips can pick another currency. */
 export function defaultCurrency(): string {
-  try {
-    const region = new Intl.Locale(navigator.language).maximize().region;
-    const map: Record<string, string> = {
-      US: "USD",
-      IN: "INR",
-      GB: "GBP",
-      AU: "AUD",
-      CA: "CAD",
-      SG: "SGD",
-      AE: "AED",
-      JP: "JPY",
-      CH: "CHF",
-      NZ: "NZD",
-    };
-    const euro = ["DE", "FR", "ES", "IT", "NL", "IE", "PT", "BE", "AT", "FI", "GR"];
-    if (region && map[region]) return map[region];
-    if (region && euro.includes(region)) return "EUR";
-  } catch {
-    // Fall through.
-  }
-  return "USD";
+  return "INR";
 }
 
 /** An amount for an input field, with thousands separators: 12,345.50. parseAmount reads it back. */
