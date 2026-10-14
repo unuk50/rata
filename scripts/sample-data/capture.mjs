@@ -310,7 +310,7 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
   const meExp = Object.entries(expectedByName[me] ?? {}).filter(([, v]) => v);
   const card = await page
     .getByText(
-      /^\s*(Your balance|You're owed|You owe|All settled|You're square|You are square)\s*$/i,
+      /^\s*(Your balance|You're owed|You owe|All settled|You're square|You are square)\b/i,
     )
     .first()
     .locator("xpath=..")
