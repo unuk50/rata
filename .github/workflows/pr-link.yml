@@ -12,6 +12,7 @@ jobs:
     name: Links an issue or a product direction
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Check the pull request body
         env:
           BODY: ${{ github.event.pull_request.body }}
@@ -22,8 +23,8 @@ jobs:
           if printf '%s' "$body" | grep -Eiq '(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]+(#[0-9]+|https://github\.com/[^[:space:]]+/issues/[0-9]+)'; then
             echo "Links an issue."; exit 0
           fi
-          if printf '%s' "$body" | grep -Eiq 'direction:[[:space:]]*`?docs/product/[A-Za-z0-9._/#-]+'; then
+          if printf '%s' "$body" | python3 .github/scripts/check_direction.py; then
             echo "Links a product direction."; exit 0
           fi
-          echo "::error::Add 'Closes #N', 'Refs #N' or 'Direction: docs/product/<file>#<section>' to the pull request body. See CONTRIBUTING.md."
+          echo "::error::Add 'Closes #N', 'Refs #N' or 'Direction: docs/product/<file>#<section>' (an existing file and heading) to the pull request body. See CONTRIBUTING.md."
           exit 1
