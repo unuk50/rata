@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr merge:*)",
+      "Bash(gh api -X PUT repos/unuk50/rata/pulls:*)",
+      "Bash(gh api -X POST repos/unuk50/rata/rulesets:*)",
+      "Bash(gh api -X PUT repos/unuk50/rata/rulesets:*)",
+      "Bash(gh api -X PATCH repos/unuk50/rata:*)"
+    ]
+  }
+}
