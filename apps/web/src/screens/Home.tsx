@@ -2,7 +2,7 @@ import { balances, convertBalances, decodeInvite, foldEvents, type Rates } from 
 import { useEffect, useState } from "react";
 import { go, useGroups, useRates } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
-import { Avatar, Icon, Money } from "../lib/ui";
+import { Avatar, hashIndex, Icon, Money } from "../lib/ui";
 
 interface Net {
   kind?: string;
@@ -117,8 +117,8 @@ export function Home() {
                   className="row press active:bg-panel"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  {/* The group's letter in its own colour, like a person. Order added keeps it stable. */}
-                  <Avatar name={g.name} i={groups.indexOf(g)} />
+                  {/* The group's letter; the colour comes from the group id, so it never changes. */}
+                  <Avatar name={g.name} i={hashIndex(g.gid)} />
                   <span className="min-w-0 flex-1 truncate font-bold">{g.name}</span>
                   <GroupNet n={nets[g.gid]} />
                 </button>

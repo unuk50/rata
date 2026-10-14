@@ -32,22 +32,22 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 
 1. **Soft and borderless.** Surfaces and controls are filled shapes with the two radius tokens. No borders on cards, fields or dropdowns; a field gets lighter in focus. Avatars are round. Space follows an 8 px grid with a 16 px side gutter. Put radius and shape in `index.css` utilities, not in screens.
 2. **One accent action per screen.** It uses `btn-primary`. Other actions use `btn-secondary` (grey pill) or `btn-ghost` (text only).
-3. **Flat, with soft feedback.** Buttons are flat pills. On press they shrink a little (`press`). No 3D edges, no outlines. Lists run edge to edge with no boxes; day headings stick under the page header. Each row has the same leading slot: an avatar, or a category glyph for an expense.
+3. **Flat, with soft feedback.** Buttons are flat pills. On press they shrink a little (`press`). No 3D edges, no outlines.
 4. **Sentence case.** Labels, section titles, tabs and buttons use sentence case. Small meta text uses `meta` (13 px, 600, `muted`). Do not use tracked capitals.
 5. **Money is big and bold.** A balance uses 800 weight and tabular numbers (`num`). Green and red show only the direction of money, not decoration.
 6. **Dark only.** No light theme. Contrast of body text on `ink` is at least 4.5:1.
 7. **Motion is short.** 120 ms ease-out for the press (scale to 0.97). No bounce, no long fades.
 8. **Text in ASD-STE100.** Short sentences, active voice, one meaning for each word.
 9. **Minimal text.** Labels have 1 to 3 words. No paragraphs that explain how the app works; a lock icon with "Private" says it. If a control needs a sentence of help, change the control.
-10. **Lists run edge to edge.** One row is 64 px high (`row`), with a 40 px round leading slot: a person or group letter (`<Avatar>`) or a category (`<CategoryIcon>`). No boxes or lines between rows. Tap feedback is `active:bg-panel`, never a hover colour.
+10. **Lists run edge to edge.** One row is 64 px high (`row`), with a 40 px round leading slot: a person or group letter (`<Avatar>`) or a category (`<CategoryIcon>`). No boxes or lines between rows. Tap feedback is `active:bg-panel`, never a hover colour. In the expense list one heading for each month sticks under the page header, and each row shows its day.
 11. **Line icons in the app, emoji only for the group type.** Categories use the line icons in `CATEGORY_ICON`. The only emoji are the group types on New group.
-10. **Tap people, do not pick them from a list.** Use `<PeoplePicker>` for payer, split and settle. Use a `<select>` only for long lists such as currencies.
-11. **Amount first.** On money screens the amount is the biggest thing (`amount`). The main action sits in a sticky bottom bar.
-12. **Signs, not only colour.** Amounts that show direction have `+` or `−` as well as green or red. If a label already says the direction ("You owe"), drop the sign and keep the colour (`<Money tone>`).
-13. **Colours by position.** `<Avatar i={index}>` takes its colour from the person's place in the group, so two people in one group never share a colour.
-14. **Names, not only initials.** A row about two people shows both names ("Ananya → You"). Initials alone are not enough.
-15. **No dead ends.** An error or empty page uses `<Notice>`: one icon, one line, one way out.
-16. **Actions say what they do.** Use a verb: "Mark paid", not "Paid". Only the main action of a screen is the accent button.
+12. **Tap people, do not pick them from a list.** Use `<PeoplePicker>` for payer, split and settle. Use a `<select>` only for long lists such as currencies.
+13. **Amount first.** On money screens the amount is the biggest thing (`amount`). The main action sits in a sticky bottom bar.
+14. **Signs, not only colour.** Amounts that show direction have `+` or `−` as well as green or red. If a label already says the direction ("You owe"), drop the sign and keep the colour (`<Money tone>`).
+15. **Colours by position.** `<Avatar i={index}>` takes its colour from the person's place in the group, so up to ten people in one group never share a colour. Groups on Home use `hashIndex(gid)`. The background is dark enough for white text at 4.5:1.
+16. **Names, not only initials.** A row about two people shows both names ("Ananya → You"). Initials alone are not enough.
+17. **No dead ends.** An error or empty page uses `<Notice>`: one icon, one line, one way out.
+18. **Actions say what they do.** Use a verb: "Mark paid", not "Paid". Only the main action of a screen is the accent button.
 
 ## Components
 

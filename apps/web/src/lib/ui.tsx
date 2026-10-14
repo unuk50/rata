@@ -198,23 +198,46 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-// Ten colours with no green, red or lime-yellow (those mean owed, owes and selected).
-// Neighbours on the wheel differ in lightness too, so close hues stay apart.
-// People 11 and up reuse a colour.
+// Ten hues with no green, red or lime-yellow (those mean owed, owes and selected).
+// People 11 and up reuse a hue.
 const HUES = [20, 220, 295, 170, 45, 245, 320, 195, 270, 340];
-const LIGHT = [44, 40, 40, 32, 48, 52, 46, 46, 56, 64];
+
+/** WCAG relative luminance of an HSL colour (s and l from 0 to 1). */
+function luminance(h: number, s: number, l: number): number {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const ch = (n: number) => {
+    const v = l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(0) + 0.7152 * ch(8) + 0.0722 * ch(4);
+}
+
+// For each hue, the lightest background (up to 42%) where white text has 4.5:1 contrast.
+const LIGHT = HUES.map((h) => {
+  let l = 42;
+  while (l > 20 && 1.05 / (luminance(h, 0.55, l / 100) + 0.05) < 4.5) l -= 1;
+  return l;
+});
+
+/** A stable index from a text id, for things with no position (groups on Home). */
+export function hashIndex(id: string): number {
+  let n = 0;
+  for (const c of id) n = (n * 31 + c.charCodeAt(0)) >>> 0;
+  return n;
+}
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
   const n = i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
   const hue = HUES[n % HUES.length] ?? 0;
-  const light = LIGHT[n % HUES.length] ?? 40;
+  const light = LIGHT[n % HUES.length] ?? 36;
   return (
     <span
       className={`avatar ${big ? "h-12 w-12 text-lg" : "h-10 w-10 text-sm"}`}
       style={{
-        background: `hsl(${hue} 50% ${light}%)`,
-        color: light > 50 ? `hsl(${hue} 60% 12%)` : `hsl(${hue} 100% 94%)`,
+        background: `hsl(${hue} 55% ${light}%)`,
+        color: "#fff",
       }}
       aria-hidden="true"
     >
@@ -274,7 +297,7 @@ export function PeoplePicker({
       style={edges.l || edges.r ? { maskImage: mask } : undefined}
     >
       <legend className="sr-only">{label}</legend>
-      <div className="flex w-max gap-1 pt-1 pr-8">
+      <div className="flex w-max gap-1 pt-1">
         {people.map((p, i) => {
           const on = selected(p.mid);
           const off = disabled?.(p.mid) ?? false;
@@ -372,17 +395,17 @@ export const CATEGORIES = [
   "Other",
 ];
 
-/** One line icon and one hue for each category, for the leading slot of an expense row. */
+/** One line icon and one hue for each category, for the leading slot of an expense row. Hue -1 is grey. */
 export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
-  General: { d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", hue: 220 },
+  General: { d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", hue: -1 },
   Food: { d: "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 3-3 7h3v11", hue: 24 },
   Groceries: { d: "M3 4h2l2 11h11l2-8H6M9 20h.01M17 20h.01", hue: 160 },
   Travel: {
     d: "M10 14l-6 3v-2l6-5V5a2 2 0 0 1 4 0v5l6 5v2l-6-3v4l2 2v1l-4-1-4 1v-1l2-2z",
     hue: 195,
   },
-  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 205 },
-  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 262 },
+  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 230 },
+  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 270 },
   Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 330 },
   Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 290 },
   Bills: { d: "M13 3L5 14h6l-1 7 8-11h-6z", hue: 44 },
@@ -392,7 +415,7 @@ export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
     d: "M4 10h16v4H4zM6 14h12v7H6zM12 10v11M12 10c-2-4-6-4-6-1s6 1 6 1c2-4 6-4 6-1s-6 1-6 1",
     hue: 310,
   },
-  Other: { d: "M6 12h.01M12 12h.01M18 12h.01", hue: 235 },
+  Other: { d: "M6 12h.01M12 12h.01M18 12h.01", hue: -1 },
 };
 
 /** The leading slot of an expense row: the category icon on a tinted disc. */
@@ -402,7 +425,10 @@ export function CategoryIcon({ c }: { c?: string }) {
   return (
     <span
       className="avatar h-10 w-10"
-      style={{ background: `hsl(${hue} 35% 24%)`, color: `hsl(${hue} 90% 80%)` }}
+      style={{
+        background: hue < 0 ? "var(--color-raised-2)" : `hsl(${hue} 35% 24%)`,
+        color: hue < 0 ? "var(--color-fg-2)" : `hsl(${hue} 90% 80%)`,
+      }}
       aria-hidden="true"
     >
       <svg
@@ -441,8 +467,8 @@ export function AmountField({
   onBlur?: () => void;
   autoFocus?: boolean;
 }) {
-  // A letter code (THB) is already on the picker above, so only a symbol (₹, $, ¥) shows here.
-  const sym = /\p{L}{2,}/u.test(currencySymbol(cur)) ? "" : currencySymbol(cur);
+  // Only the sign part shows (₹, $, ¥ from JP¥). A letter code (THB) is already on the picker.
+  const sym = currencySymbol(cur).replace(/\p{L}/gu, "");
   return (
     <div className="flex max-w-full items-baseline justify-center gap-2">
       {sym && (

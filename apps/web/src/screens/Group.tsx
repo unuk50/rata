@@ -26,6 +26,24 @@ import {
 
 type Tab = "expenses" | "balances";
 
+/** "October", or "October 2025" when it is not this year. One heading for each month. */
+function monthLabel(month: string) {
+  const d = new Date(`${month}-15T12:00`);
+  const thisYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(undefined, {
+    month: "long",
+    ...(thisYear ? {} : { year: "numeric" }),
+  });
+}
+
+/** "14 Oct", the day on each row under its month heading. */
+function shortDay(date: string) {
+  return new Date(`${date}T12:00`).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 function dayLabel(date: string) {
   return new Date(`${date}T12:00`).toLocaleDateString(undefined, {
     weekday: "short",
@@ -112,11 +130,13 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
     ...state.expenses.map((e) => ({ kind: "e" as const, date: e.date, ts: e.ts, e })),
     ...state.payments.map((p) => ({ kind: "p" as const, date: p.date, ts: p.ts, p })),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts);
-  const days: { date: string; items: typeof rows }[] = [];
+  // One heading for each month, like a bank feed; the day shows on each row.
+  const months: { month: string; items: typeof rows }[] = [];
   for (const r of rows) {
-    const last = days[days.length - 1];
-    if (last && last.date === r.date) last.items.push(r);
-    else days.push({ date: r.date, items: [r] });
+    const last = months[months.length - 1];
+    const month = r.date.slice(0, 7);
+    if (last && last.month === month) last.items.push(r);
+    else months.push({ month, items: [r] });
   }
 
   return (
@@ -205,16 +225,16 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
 
           <TabPanel id="gtab" value={tab}>
             {tab === "expenses" &&
-              (days.length === 0 ? (
+              (months.length === 0 ? (
                 <div className="py-16 text-center">
                   <p className="text-lg font-bold">Nothing spent yet</p>
                   <p className="mt-2 text-sm text-muted">Tap “Add expense” below.</p>
                 </div>
               ) : (
                 <div className="-mx-4">
-                  {days.map((d) => (
-                    <section key={d.date}>
-                      <h3 className="day-head">{dayLabel(d.date)}</h3>
+                  {months.map((d) => (
+                    <section key={d.month}>
+                      <h3 className="day-head">{monthLabel(d.month)}</h3>
                       <ul>
                         {d.items.map((row) =>
                           row.kind === "e" ? (
@@ -228,6 +248,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                 <div className="min-w-0 flex-1">
                                   <div className="truncate font-bold">{row.e.desc}</div>
                                   <div className="truncate text-[13px] text-muted">
+                                    {shortDay(row.e.date)} ·{" "}
                                     {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
                                     <Money v={row.e.amount} c={row.e.currency} />
                                   </div>
@@ -245,7 +266,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                 <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
                                 <div className="min-w-0 flex-1">
                                   <Pair from={name(row.p.from)} to={name(row.p.to)} />
-                                  <div className="text-[13px] text-muted">Payment</div>
+                                  <div className="text-[13px] text-muted">
+                                    {shortDay(row.p.date)} · Payment
+                                  </div>
                                 </div>
                                 <span className="num shrink-0 text-sm font-bold text-fg-2">
                                   <Money v={row.p.amount} c={row.p.currency} />

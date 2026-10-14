@@ -352,7 +352,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             <h2 className="meta">Paid by</h2>
             <button
               type="button"
-              className="meta underline"
+              className="meta text-accent"
               onClick={() => setPayer(payer === "*" ? (saved.me ?? members[0]?.mid ?? "") : "*")}
             >
               {payer === "*" ? "One person" : "Several people"}
@@ -465,7 +465,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             <span className="text-fg-2">{isToday ? "Today" : date}</span>·
             <span className="text-fg-2">{category}</span>
             {note && <span className="text-fg-2">· Note</span>}
-            <span className="ml-auto underline">More</span>
+            <span className="ml-auto text-accent">More</span>
           </summary>
           <div className="mt-3 space-y-3">
             <div className="flex gap-2">
