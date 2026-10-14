@@ -1,4 +1,5 @@
 import {
+  allocate,
   currencyExponent,
   type ExpenseEvent,
   formatMoney,
@@ -9,21 +10,41 @@ import {
   type SplitMethod,
   validateExpense,
 } from "@rata/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Avatar, CATEGORIES, CURRENCIES, Header, today } from "../lib/ui";
+import { toast } from "../lib/toast";
+import {
+  AmountField,
+  Avatar,
+  amountInput,
+  CATEGORIES,
+  CURRENCIES,
+  Header,
+  Notice,
+  PeoplePicker,
+  reAmount,
+  TabPanel,
+  Tabs,
+  today,
+  ZERO,
+} from "../lib/ui";
 
 const METHODS: { id: SplitMethod; label: string }[] = [
-  { id: "equal", label: "Equally" },
-  { id: "exact", label: "Amounts" },
-  { id: "percent", label: "Percent" },
+  { id: "equal", label: "Equal" },
+  { id: "exact", label: "Exact" },
+  { id: "percent", label: "%" },
   { id: "shares", label: "Shares" },
 ];
 
-function fmtInput(minor: number, cur: string) {
+/** Say why an amount does not parse: too many decimals for the currency, or not a number. */
+function amountError(text: string, cur: string): string {
+  if (!text.trim()) return "Enter an amount.";
+  const dec = text.trim().split(".")[1];
   const exp = currencyExponent(cur);
-  return (minor / 10 ** exp).toFixed(exp);
+  if (dec !== undefined && /^\d+$/.test(dec) && dec.length > exp)
+    return exp === 0 ? `${cur} has no decimals.` : `${cur} has ${exp} decimals.`;
+  return "Enter a valid amount.";
 }
 
 export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; eid?: string }) {
@@ -45,12 +66,15 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   const [inSplit, setInSplit] = useState<Record<string, boolean>>({});
   const [parts, setParts] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  // A changed input makes the old error wrong, so clear it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these inputs reset the error
+  useEffect(() => setError(""), [desc, amount, currency, payer, multiPay, method, inSplit, parts]);
 
   if (!init && group && members.length) {
     setInit(true);
     if (existing) {
       setDesc(existing.desc);
-      setAmount(fmtInput(existing.amount, existing.currency));
+      setAmount(amountInput(existing.amount, existing.currency));
       setCurrency(existing.currency);
       setDate(existing.date);
       setCategory(existing.category ?? "General");
@@ -61,7 +85,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         setPayer("*");
         setMultiPay(
           Object.fromEntries(
-            payers.map((p) => [p, fmtInput(existing.paidBy[p] ?? 0, existing.currency)]),
+            payers.map((p) => [p, amountInput(existing.paidBy[p] ?? 0, existing.currency)]),
           ),
         );
       }
@@ -74,7 +98,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
           Object.entries(existing.split.parts).map(([k, v]) => [
             k,
             existing.split.method === "exact"
-              ? fmtInput(v, existing.currency)
+              ? amountInput(v, existing.currency)
               : existing.split.method === "percent"
                 ? String(v / 100)
                 : String(v),
@@ -91,8 +115,10 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   const cur = currency || group?.currency || "USD";
   const total = parseAmount(amount, cur);
 
+  const paidSoFar = Object.values(multiPay).reduce((t, v) => t + (parseAmount(v, cur) ?? 0), 0);
+
   const build = (): ExpenseEvent | string => {
-    if (total === null) return "Enter a valid amount.";
+    if (total === null) return amountError(amount, cur);
     let paidBy: Record<string, number>;
     if (payer === "*") {
       paidBy = {};
@@ -122,7 +148,9 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         n < 0 ||
         (method === "shares" && !Number.isInteger(n))
       )
-        return `Check the value for ${m.name}.`;
+        return method === "shares"
+          ? `Shares are whole numbers (${m.name}).`
+          : `Check the value for ${m.name}.`;
       if (n > 0) p[m.mid] = n;
     }
     return {
@@ -152,25 +180,66 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     }
   })();
 
+  /** Start each method with an even split, so the form does not open on an error. */
+  const pickMethod = (m: SplitMethod) => {
+    setMethod(m);
+    if (m === "equal") return;
+    if (existing && existing.split.method === m) {
+      // Back to the saved method: bring back the saved values.
+      const ps = existing.split.parts;
+      setParts(
+        Object.fromEntries(
+          Object.entries(ps).map(([k, v]) => [
+            k,
+            m === "exact"
+              ? reAmount(amountInput(v, existing.currency), existing.currency, cur)
+              : m === "percent"
+                ? String(v / 100)
+                : String(v),
+          ]),
+        ),
+      );
+      return;
+    }
+    const ids = members.filter((x) => inSplit[x.mid]).map((x) => x.mid);
+    const who = ids.length ? ids : members.map((x) => x.mid);
+    const even = (n: number) =>
+      allocate(
+        n,
+        who.map(() => 1),
+      );
+    const vals =
+      m === "shares"
+        ? who.map(() => "1")
+        : m === "percent"
+          ? even(10000).map((v) => String(v / 100))
+          : total
+            ? even(total).map((v) => amountInput(v, cur))
+            : who.map(() => "");
+    setParts(Object.fromEntries(who.map((mid, i) => [mid, vals[i] ?? ""])));
+  };
+
   const save = async () => {
     const e = build();
     if (typeof e === "string") return setError(e);
     const v = validateExpense(e);
     if (v) return setError(v);
-    await sync?.add([e]);
+    if (!sync) return setError("Still loading. Try again.");
+    await sync.add([e]);
     go(`/g/${saved.gid}`);
+    toast(existing ? `Saved “${e.desc}”` : `Added “${e.desc}”`);
   };
 
   const remove = async () => {
-    if (
-      !existing ||
-      !confirm("Delete this expense? Everyone in the group will see that you deleted it.")
-    )
-      return;
-    await sync?.add([
+    if (!existing || !sync) return;
+    await sync.add([
       { t: "expense.del", id: newId(), ts: Date.now(), by: saved.me, eid: existing.eid },
     ]);
     go(`/g/${saved.gid}`);
+    toast(`Deleted “${existing.desc}”`, {
+      label: "Undo",
+      run: () => void sync.add([{ ...existing, id: newId(), ts: Date.now(), by: saved.me }]),
+    });
   };
 
   if (!group) return <Header title="Expense" back={`/g/${saved.gid}`} />;
@@ -178,7 +247,12 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     return (
       <div>
         <Header title="Expense" back={`/g/${saved.gid}`} />
-        <p className="text-stone-500">This expense was deleted.</p>
+        <Notice
+          icon="x"
+          text="This expense was deleted."
+          action="Back to group"
+          to={`/g/${saved.gid}`}
+        />
       </div>
     );
   }
@@ -188,205 +262,263 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     if (!raw) return a;
     return a + (method === "exact" ? (parseAmount(raw, cur) ?? 0) : Number(raw) || 0);
   }, 0);
+  const inCount = members.filter((m) => inSplit[m.mid]).length;
+  // Shares of the people in the split, zeros included: 0.01 for three is 0.01, 0, 0.
+  const shares = preview
+    ? members.filter((m) => inSplit[m.mid]).map((m) => preview[m.mid] ?? 0)
+    : [];
+  const each = shares.length ? Math.min(...shares) : undefined;
+  // A remainder cent can make shares differ. Then the amount is "about" each share.
+  const about = shares.some((v) => v !== each) ? "about " : "";
+  const isToday = date === today();
 
   return (
-    <div className="pb-10">
+    <div className="pb-40">
       <Header
         title={existing ? "Edit expense" : "Add expense"}
         back={`/g/${saved.gid}`}
         right={
           existing && (
-            <button type="button" className="btn-ghost text-owes" onClick={remove}>
+            <button type="button" className="btn-ghost btn-sm text-owes" onClick={remove}>
               Delete
             </button>
           )
         }
       />
-      <div className="space-y-4">
-        <div>
-          <label className="label" htmlFor="desc">
-            Description
-          </label>
-          <input
-            id="desc"
-            className="field"
-            placeholder="Dinner, taxi, groceries"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+      <div className="space-y-6">
+        {/* Amount first and big, centred; the currency reads as text above it. */}
+        <div className="flex flex-col items-center gap-1 pt-2 pb-4">
+          <select
+            id="cur"
+            className="select-plain text-sm"
+            value={cur}
+            onChange={(e) => {
+              const to = e.target.value;
+              const newAmount = reAmount(amount, cur, to);
+              const newTotal = parseAmount(newAmount, to);
+              // Spread the new total in the same proportions, so rounding cannot unbalance the parts.
+              const conv = (vals: Record<string, string>) => {
+                const keys = Object.keys(vals).filter((k) => vals[k]?.trim());
+                const old = keys.map((k) => parseAmount(vals[k] ?? "", cur) ?? 0);
+                const balanced = old.reduce((x, y) => x + y, 0) === parseAmount(amount, cur);
+                if (
+                  newTotal === null ||
+                  !balanced ||
+                  old.some((v) => v < 0) ||
+                  old.every((v) => !v)
+                )
+                  return Object.fromEntries(
+                    Object.entries(vals).map(([k, v]) => [k, reAmount(v, cur, to)]),
+                  );
+                const shares = allocate(newTotal, old);
+                return {
+                  ...vals,
+                  ...Object.fromEntries(keys.map((k, i) => [k, amountInput(shares[i] ?? 0, to)])),
+                };
+              };
+              setAmount(newAmount);
+              setMultiPay(conv(multiPay));
+              if (method === "exact") setParts(conv(parts));
+              setCurrency(to);
+            }}
+            aria-label="Currency"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+          <AmountField
+            id="amt"
+            cur={cur}
+            value={amount}
+            onChange={setAmount}
+            onBlur={() => {
+              if (total) setAmount(amountInput(total, cur));
+            }}
             autoFocus={!existing}
           />
         </div>
-        <div className="flex gap-2">
-          <div className="w-28">
-            <label className="label" htmlFor="cur">
-              Currency
-            </label>
-            <select
-              id="cur"
-              className="field"
-              value={cur}
-              onChange={(e) => setCurrency(e.target.value)}
-            >
-              {CURRENCIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="label" htmlFor="amt">
-              Amount
-            </label>
-            <input
-              id="amt"
-              className="field num text-right text-lg"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="label" htmlFor="date">
-              Date
-            </label>
-            <input
-              id="date"
-              type="date"
-              className="field"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="label" htmlFor="cat">
-              Category
-            </label>
-            <select
-              id="cat"
-              className="field"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <input
+          id="desc"
+          className="field text-lg font-bold"
+          placeholder="What for?"
+          aria-label="Description"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+        />
 
-        <div>
-          <label className="label" htmlFor="payer">
-            Paid by
-          </label>
-          <select
-            id="payer"
-            className="field"
-            value={payer}
-            onChange={(e) => setPayer(e.target.value)}
-          >
-            {members.map((m) => (
-              <option key={m.mid} value={m.mid}>
-                {m.mid === saved.me ? `${m.name} (you)` : m.name}
-              </option>
-            ))}
-            <option value="*">More than one person</option>
-          </select>
-          {payer === "*" && (
-            <div className="card mt-2 divide-y divide-stone-200 dark:divide-stone-800">
-              {members.map((m) => (
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="meta">Paid by</h2>
+            <button
+              type="button"
+              className="meta text-accent"
+              onClick={() => setPayer(payer === "*" ? (saved.me ?? members[0]?.mid ?? "") : "*")}
+            >
+              {payer === "*" ? "One person" : "Several people"}
+            </button>
+          </div>
+          {payer !== "*" ? (
+            <PeoplePicker
+              label="Paid by"
+              people={members}
+              me={saved.me}
+              selected={(mid) => payer === mid}
+              onToggle={setPayer}
+            />
+          ) : (
+            <div className="-mx-2">
+              {members.map((m, i) => (
                 <div key={m.mid} className="flex items-center gap-3 p-2">
-                  <Avatar name={m.name} />
-                  <span className="flex-1 text-sm">{m.name}</span>
+                  <Avatar name={m.name} i={i} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                    {m.mid === saved.me ? "You" : m.name}
+                  </span>
                   <input
                     className="field num w-32 text-right"
                     inputMode="decimal"
-                    placeholder="0.00"
+                    placeholder={ZERO}
                     value={multiPay[m.mid] ?? ""}
                     onChange={(e) => setMultiPay({ ...multiPay, [m.mid]: e.target.value })}
                     aria-label={`${m.name} paid`}
                   />
                 </div>
               ))}
+              {total !== null && (
+                <div className={`meta p-2 text-right ${paidSoFar === total ? "" : "text-owes"}`}>
+                  Paid {formatMoney(paidSoFar, cur)} of {formatMoney(total, cur)}
+                  {paidSoFar < total && ` · ${formatMoney(total - paidSoFar, cur)} left`}
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </section>
 
-        <div>
-          <span className="label">Split</span>
-          <div className="mb-2 grid grid-cols-4 rounded-xl bg-stone-200/60 p-1 text-sm dark:bg-stone-800">
-            {METHODS.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMethod(m.id)}
-                className={`rounded-lg py-2 font-medium ${method === m.id ? "bg-white shadow-sm dark:bg-stone-900" : "text-stone-500"}`}
-              >
-                {m.label}
-              </button>
-            ))}
+        <section>
+          <h2 className="meta mb-2">Split</h2>
+          <div className="mb-3">
+            <Tabs id="split" options={METHODS} value={method} onChange={pickMethod} />
           </div>
-          <div className="card divide-y divide-stone-200 dark:divide-stone-800">
-            {members.map((m) => (
-              <div key={m.mid} className="flex items-center gap-3 p-2">
-                {method === "equal" ? (
-                  <input
-                    type="checkbox"
-                    className="h-5 w-5 accent-teal-700"
-                    checked={!!inSplit[m.mid]}
-                    onChange={(e) => setInSplit({ ...inSplit, [m.mid]: e.target.checked })}
-                    aria-label={`Include ${m.name}`}
-                  />
-                ) : null}
-                <Avatar name={m.name} />
-                <span className="flex-1 text-sm">{m.name}</span>
-                {method !== "equal" && (
-                  <input
-                    className="field num w-28 text-right"
-                    inputMode="decimal"
-                    placeholder={method === "shares" ? "0" : method === "percent" ? "0 %" : "0.00"}
-                    value={parts[m.mid] ?? ""}
-                    onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
-                    aria-label={`${m.name} ${method}`}
-                  />
+          <TabPanel id="split" value={method}>
+            {method === "equal" ? (
+              <>
+                <PeoplePicker
+                  label="Split between"
+                  people={members}
+                  me={saved.me}
+                  selected={(mid) => !!inSplit[mid]}
+                  onToggle={(mid) => setInSplit({ ...inSplit, [mid]: !inSplit[mid] })}
+                />
+                <p className="meta mt-2">
+                  {inCount === 0
+                    ? "Tap people to split"
+                    : `${inCount} ${inCount === 1 ? "person" : "people"}${each !== undefined ? ` · ${about}${formatMoney(each, cur)} each` : ""}`}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="-mx-2">
+                  {members.map((m, i) => (
+                    <div key={m.mid} className="flex items-center gap-3 p-2">
+                      <Avatar name={m.name} i={i} />
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                        {m.mid === saved.me ? "You" : m.name}
+                      </span>
+                      <input
+                        className="field num w-24 text-right"
+                        inputMode="decimal"
+                        placeholder={ZERO}
+                        value={parts[m.mid] ?? ""}
+                        onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
+                        aria-label={`${m.name} ${method}`}
+                      />
+                      {method !== "exact" && (
+                        <span className="num w-20 shrink-0 text-right text-sm text-muted">
+                          {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "—"}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {method === "exact" && total !== null && (
+                  <p className={`meta mt-2 ${sumParts === total ? "" : "text-owes"}`}>
+                    {formatMoney(sumParts, cur)} / {formatMoney(total, cur)}
+                  </p>
                 )}
-                <span className="num w-24 text-right text-sm text-stone-500">
-                  {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "–"}
-                </span>
+                {method === "percent" && (
+                  <p
+                    className={`meta mt-2 ${Math.round(sumParts * 100) === 10000 ? "" : "text-owes"}`}
+                  >
+                    {sumParts}% / 100%
+                  </p>
+                )}
+              </>
+            )}
+          </TabPanel>
+        </section>
+
+        <details
+          className="group"
+          open={!!existing && (!isToday || category !== "General" || !!note)}
+        >
+          <summary className="meta flex cursor-pointer list-none items-center gap-2">
+            <span className="text-fg-2">{isToday ? "Today" : date}</span>·
+            <span className="text-fg-2">{category}</span>
+            {note && <span className="text-fg-2">· Note</span>}
+            <span className="ml-auto text-accent">More</span>
+          </summary>
+          <div className="mt-3 space-y-3">
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <label className="label" htmlFor="date">
+                  Date
+                </label>
+                <input
+                  id="date"
+                  type="date"
+                  className="field-select"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
-            ))}
+              <div className="min-w-0 flex-1">
+                <label className="label" htmlFor="cat">
+                  Category
+                </label>
+                <select
+                  id="cat"
+                  className="field-select"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="label" htmlFor="note">
+                Note
+              </label>
+              <input
+                id="note"
+                className="field"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
           </div>
-          {method === "exact" && total !== null && (
-            <p className={`mt-1 text-xs ${sumParts === total ? "text-stone-500" : "text-owes"}`}>
-              {formatMoney(sumParts, cur)} of {formatMoney(total, cur)}
-            </p>
-          )}
-          {method === "percent" && (
-            <p
-              className={`mt-1 text-xs ${Math.round(sumParts * 100) === 10000 ? "text-stone-500" : "text-owes"}`}
-            >
-              {sumParts}% of 100%
-            </p>
-          )}
-        </div>
+        </details>
+      </div>
 
-        <div>
-          <label className="label" htmlFor="note">
-            Note (optional)
-          </label>
-          <input
-            id="note"
-            className="field"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+      <div className="bottom-bar">
+        <div className="mx-auto max-w-xl">
+          {error && <p className="mb-2 text-sm text-owes">{error}</p>}
+          <button type="button" className="btn-primary w-full" onClick={save}>
+            Save
+          </button>
         </div>
-
-        {error && <p className="text-sm text-owes">{error}</p>}
-        <button type="button" className="btn-primary w-full py-3" onClick={save}>
-          Save
-        </button>
       </div>
     </div>
   );

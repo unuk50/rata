@@ -9,7 +9,11 @@ import {
 } from "@rata/core";
 import { type GroupCache, type Pending, storage } from "./storage";
 
-export type SyncStatus = "loading" | "syncing" | "live" | "offline";
+/**
+ * "invalid": the server rejected the key. "empty": the server has nothing for this link yet,
+ * which can be a wrong link or a group whose maker has not synced yet, so it keeps retrying.
+ */
+export type SyncStatus = "loading" | "syncing" | "live" | "offline" | "invalid" | "empty";
 
 interface Snapshot {
   state: GroupState;
@@ -48,7 +52,16 @@ export class GroupSync {
     this.refold();
     this.connect();
     window.addEventListener("online", this.onOnline);
+    window.addEventListener("offline", this.onOffline);
   }
+
+  /** Show Offline at once. The socket can stay "open" for a while after the network drops. */
+  private onOffline = () => {
+    const ws = this.ws;
+    this.ws = null;
+    ws?.close();
+    this.setStatus("offline");
+  };
 
   private onOnline = () => {
     this.retry = 0;
@@ -153,6 +166,7 @@ export class GroupSync {
       const res = await fetch(`${this.base()}/events?after=${this.cache.last}`, {
         headers: await this.headers(),
       });
+      if (res.status === 401) throw new InvalidLink();
       if (!res.ok) throw new Error(`pull failed ${res.status}`);
       const body = (await res.json()) as {
         events: { seq: number; id: string; sealed: string }[];
@@ -170,9 +184,18 @@ export class GroupSync {
     try {
       await this.flush();
       await this.pull();
+      if (this.queue.length === 0 && Object.keys(this.cache.events).length === 0) {
+        this.scheduleReconnect();
+        // Offline mid-pull: keep the offline status, the link may be fine.
+        if (navigator.onLine) this.setStatus("empty");
+        return;
+      }
+      const token = await this.token;
+      if (this.closed) return;
+      if (!navigator.onLine) return this.setStatus("offline");
       const proto = location.protocol === "https:" ? "wss" : "ws";
       const ws = new WebSocket(
-        `${proto}://${location.host}${this.base()}/ws?token=${encodeURIComponent(await this.token)}`,
+        `${proto}://${location.host}${this.base()}/ws?token=${encodeURIComponent(token)}`,
       );
       this.ws = ws;
       ws.onopen = () => {
@@ -192,7 +215,8 @@ export class GroupSync {
         if (this.ws === ws) this.ws = null;
         this.scheduleReconnect();
       };
-    } catch {
+    } catch (err) {
+      if (err instanceof InvalidLink) return this.setStatus("invalid");
       this.scheduleReconnect();
     }
   }
@@ -211,12 +235,21 @@ export class GroupSync {
   close() {
     this.closed = true;
     window.removeEventListener("online", this.onOnline);
+    window.removeEventListener("offline", this.onOffline);
     if (this.timer) clearTimeout(this.timer);
     this.ws?.close();
   }
 }
 
+class InvalidLink extends Error {}
+
 const live = new Map<string, GroupSync>();
+
+/** Stop syncing a group that is not on this device, for example after a visit to its invite link. */
+export function dropSync(gid: string) {
+  live.get(gid)?.close();
+  live.delete(gid);
+}
 
 export function getSync(secret: GroupSecret): GroupSync {
   let s = live.get(secret.gid);

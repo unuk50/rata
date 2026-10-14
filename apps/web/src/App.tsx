@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "./lib/hooks";
 import { type SavedGroup, storage } from "./lib/storage";
+import { Notice, ToastBar } from "./lib/ui";
 import { ExpenseForm } from "./screens/ExpenseForm";
 import { Group } from "./screens/Group";
 import { Home } from "./screens/Home";
@@ -24,12 +25,7 @@ function WithGroup({
   if (g === undefined) return null;
   if (g === null) {
     return (
-      <div className="pt-10 text-center">
-        <p className="mb-4">This group is not on this device. Open its invite link to join.</p>
-        <a className="btn-primary" href="#/">
-          Home
-        </a>
-      </div>
+      <Notice icon="link" text="This group is not on this device. Open its invite link to join." />
     );
   }
   return <>{children(g)}</>;
@@ -49,6 +45,7 @@ export function App() {
           if (c === "add") return <ExpenseForm saved={g} />;
           if (c === "e" && rest[0]) return <ExpenseForm saved={g} eid={rest[0]} key={rest[0]} />;
           if (c === "settle") return <Settle saved={g} prefill={rest} />;
+          if (c === "p" && rest[0]) return <Settle saved={g} pid={rest[0]} key={rest[0]} />;
           if (c === "invite") return <Invite saved={g} />;
           if (c === "settings") return <Settings saved={g} />;
           return <Group saved={g} />;
@@ -56,5 +53,11 @@ export function App() {
       </WithGroup>
     );
   } else view = <Home />;
-  return <main className="mx-auto max-w-xl px-4">{view}</main>;
+  return (
+    <main className="mx-auto max-w-xl px-4">
+      {view}
+      {/* Screens with a fixed bottom bar: the toast sits above it. */}
+      <ToastBar raised={a === "g" && !!b && (!c || ["add", "e", "settle", "p"].includes(c))} />
+    </main>
+  );
 }

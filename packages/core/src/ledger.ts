@@ -81,6 +81,13 @@ export function owedShares(e: Pick<ExpenseEvent, "amount" | "split">): Record<st
   return Object.fromEntries(ids.map((m, i) => [m, parts[i] ?? 0]));
 }
 
+const SPLIT_ERRORS: Record<ExpenseEvent["split"]["method"], string> = {
+  equal: "Pick at least one person to split with.",
+  exact: "The split must add up to the total.",
+  percent: "The percentages must add up to 100.",
+  shares: "Give at least one person a share.",
+};
+
 /** Validate an expense before it is saved. Returns an error message or null. */
 export function validateExpense(e: ExpenseEvent): string | null {
   if (!e.desc.trim()) return "Add a description.";
@@ -89,8 +96,8 @@ export function validateExpense(e: ExpenseEvent): string | null {
   if (paid !== e.amount) return "The amounts paid must add up to the total.";
   try {
     owedShares(e);
-  } catch (err) {
-    return (err as Error).message;
+  } catch {
+    return SPLIT_ERRORS[e.split.method];
   }
   return null;
 }

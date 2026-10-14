@@ -11,8 +11,10 @@
     "test": "echo 'web: no unit tests yet'"
   },
   "dependencies": {
+    "@fontsource-variable/manrope": "5.2.8",
     "@rata/core": "workspace:*",
     "idb-keyval": "6.2.2",
+    "qrcode-generator": "1.4.4",
     "react": "19.1.1",
     "react-dom": "19.1.1"
   },

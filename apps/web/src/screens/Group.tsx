@@ -1,6 +1,7 @@
 import {
   balances,
   convertBalances,
+  formatMoney,
   type GroupSecret,
   owedShares,
   type Rates,
@@ -10,15 +11,87 @@ import {
 import { useState } from "react";
 import { go, useGroup, useRates } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Avatar, Header, Money, StatusDot } from "../lib/ui";
+import {
+  Avatar,
+  CategoryIcon,
+  Header,
+  Icon,
+  IconButton,
+  Money,
+  Notice,
+  StatusDot,
+  TabPanel,
+  Tabs,
+  today,
+} from "../lib/ui";
+
+type Tab = "expenses" | "balances";
+
+/** "October", or "October 2025" when it is not this year. One heading for each month. */
+function monthLabel(month: string) {
+  const d = new Date(`${month}-15T12:00`);
+  const thisYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString(undefined, {
+    month: "long",
+    ...(thisYear ? {} : { year: "numeric" }),
+  });
+}
+
+/** A marker for Today and Yesterday only. Other rows show their day at the end of the second line. */
+function showMark(items: { date: string }[], i: number) {
+  const date = items[i]?.date;
+  if (!date || (i > 0 && items[i - 1]?.date === date)) return false;
+  const mark = dayMark(date);
+  return mark === "Today" || mark === "Yesterday";
+}
+
+/**
+ * A small gap where the day changes, after a day with a marker or with two or more rows. A list of
+ * single-row days keeps the plain 64 px rhythm.
+ */
+function gapBefore(items: { date: string }[], i: number) {
+  const prev = items[i - 1]?.date;
+  if (!prev || prev === items[i]?.date || showMark(items, i)) return false;
+  const mark = dayMark(prev);
+  return mark === "Today" || mark === "Yesterday" || items[i - 2]?.date === prev;
+}
+
+/** " · Sun 11" for rows not under a Today or Yesterday marker. */
+function daySuffix(date: string) {
+  const mark = dayMark(date);
+  return mark === "Today" || mark === "Yesterday" ? "" : ` · ${mark}`;
+}
+
+/** "Today", "Yesterday" or "Mon 12": a small marker where a new day starts inside a month. */
+function dayMark(date: string) {
+  const d = new Date(`${date}T12:00`);
+  const days = Math.round((new Date(`${today()}T12:00`).getTime() - d.getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
+}
+
+function dayLabel(date: string) {
+  return new Date(`${date}T12:00`).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
 
 export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   const { state, status, pending } = useGroup(saved);
   const rates = useRates();
-  const [tab, setTab] = useState<"expenses" | "balances">("expenses");
+  const [tab, setTab] = useState<Tab>("expenses");
   const g = state.group;
-  const name = (mid: string) => state.members.find((m) => m.mid === mid)?.name ?? "Someone";
   const me = saved.me;
+  const idx = (mid: string) =>
+    Math.max(
+      0,
+      state.members.findIndex((m) => m.mid === mid),
+    );
+  const realName = (mid: string) => state.members.find((m) => m.mid === mid)?.name ?? "?";
+  const name = (mid: string) => (mid === me ? "You" : realName(mid));
 
   const bal = balances(state);
   const currencies = Object.keys(bal);
@@ -38,227 +111,323 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
           string,
           number,
         ][]);
-  const myNets = netOf(me ?? "");
+  // Group currency first, so the big line does not jump between currencies.
+  const myNets = netOf(me ?? "").sort(([a], [b]) => Number(b === cur) - Number(a === cur));
+  const approx = multi && !!converted;
+  const allPos = myNets.length > 0 && myNets.every(([, v]) => v > 0);
+  const allNeg = myNets.length > 0 && myNets.every(([, v]) => v < 0);
+  const empty = state.expenses.length === 0 && state.payments.length === 0;
+  const heroLabel = empty
+    ? "Nothing spent yet"
+    : myNets.length === 0
+      ? plan.length === 0
+        ? "All settled"
+        : "You're settled"
+      : allPos
+        ? "You're owed"
+        : allNeg
+          ? "You owe"
+          : "Your balance";
+  const settled = !empty && myNets.length === 0 && plan.length === 0;
+
+  const settleLink = (t: Transfer) =>
+    `/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`;
+  // Group currency first, the same order as the hero.
+  const byCur = (a: Transfer, b: Transfer) =>
+    Number(b.currency === cur) - Number(a.currency === cur);
+  const myDebts = plan.filter((t) => t.from === me).sort(byCur);
+  const myCredits = plan.filter((t) => t.to === me).sort(byCur);
+  const myDebt = myDebts[0];
+  // One name once, even when the same person shows in several currencies.
+  const names = (all: string[]) => {
+    const ids = [...new Set(all)];
+    return ids.length > 2 ? `${ids.slice(0, 2).join(", ")} +${ids.length - 2}` : ids.join(" and ");
+  };
+  const counterparts =
+    allNeg && myDebts.length
+      ? `to ${names(myDebts.map((t) => realName(t.to)))}`
+      : allPos && myCredits.length
+        ? `from ${names(myCredits.map((t) => realName(t.from)))}`
+        : "";
+  const ratesDay =
+    rates?.date && rates.date !== new Date().toISOString().slice(0, 10) ? dayLabel(rates.date) : "";
+  const isMine = (t: Transfer) => t.from === me || t.to === me;
+
+  const rows = [
+    ...state.expenses.map((e) => ({ kind: "e" as const, date: e.date, ts: e.ts, e })),
+    ...state.payments.map((p) => ({ kind: "p" as const, date: p.date, ts: p.ts, p })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts);
+  // One heading for each month, like a bank feed; the day shows on each row.
+  const months: { month: string; items: typeof rows }[] = [];
+  for (const r of rows) {
+    const last = months[months.length - 1];
+    const month = r.date.slice(0, 7);
+    if (last && last.month === month) last.items.push(r);
+    else months.push({ month, items: [r] });
+  }
 
   return (
-    <div className="pb-28">
+    <div className="pb-36">
       <Header
         title={g?.name ?? saved.name}
         back="/"
         right={
-          <div className="flex items-center gap-2">
+          <>
             <StatusDot status={status} pending={pending} />
-            <button
-              type="button"
-              className="btn-ghost px-2"
+            <IconButton icon="invite" label="Invite" onClick={() => go(`/g/${saved.gid}/invite`)} />
+            <IconButton
+              icon="gear"
+              label="Group settings"
               onClick={() => go(`/g/${saved.gid}/settings`)}
-              aria-label="Group settings"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-              </svg>
-            </button>
-          </div>
+            />
+          </>
         }
       />
 
       {!g ? (
-        <p className="text-stone-500">
-          {status === "offline"
-            ? "Offline. This group has not loaded on this device yet."
-            : "Loading…"}
-        </p>
+        status === "invalid" ? (
+          <Notice icon="link" text="This group is not on the server. Ask for a new invite link." />
+        ) : status === "offline" ? (
+          <Notice icon="wifiOff" text="You are offline. This group opens when you are online." />
+        ) : (
+          <p className="text-muted">Loading…</p>
+        )
       ) : (
         <>
-          <div className="card mb-4 flex items-center justify-between p-4">
-            <div>
-              <div className="text-sm text-stone-500">Your balance</div>
-              <div className="text-2xl font-semibold">
-                {myNets.length === 0 ? (
-                  <span className="text-stone-500">Settled up</span>
-                ) : (
-                  myNets.map(([c, v]) => (
-                    <div key={c}>
-                      <Money v={v} c={c} signed />
-                      <span className="ml-2 text-xs font-normal text-stone-500">
-                        {v > 0 ? "owed to you" : "you owe"}
-                      </span>
+          {!empty && (
+            <button
+              type="button"
+              className="press mb-6 block w-full py-2 text-left"
+              onClick={() => setTab("balances")}
+            >
+              {myNets.length === 0 ? (
+                <>
+                  <div
+                    className={`flex items-center gap-3 text-2xl font-extrabold ${settled ? "text-owed" : "text-fg"}`}
+                  >
+                    {!empty && <Icon name="check" size={28} />} {heroLabel}
+                  </div>
+                  {!empty && plan.length > 0 && (
+                    <div className="meta mt-2">
+                      {plan.length} {plan.length === 1 ? "payment" : "payments"} left between others
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn-ghost border border-stone-300 dark:border-stone-700"
-              onClick={() => go(`/g/${saved.gid}/invite`)}
-            >
-              Invite
-            </button>
-          </div>
-
-          <div className="mb-3 grid grid-cols-2 rounded-xl bg-stone-200/60 p-1 text-sm dark:bg-stone-800">
-            {(["expenses", "balances"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={`rounded-lg py-2 font-medium capitalize ${tab === t ? "bg-white shadow-sm dark:bg-stone-900" : "text-stone-500"}`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {tab === "expenses" && (
-            <ul className="space-y-2">
-              {state.expenses.length === 0 && state.payments.length === 0 && (
-                <li className="card p-6 text-center text-stone-500">
-                  No expenses yet. Add the first one.
-                </li>
-              )}
-              {[
-                ...state.expenses.map((e) => ({ kind: "e" as const, date: e.date, ts: e.ts, e })),
-                ...state.payments.map((p) => ({ kind: "p" as const, date: p.date, ts: p.ts, p })),
-              ]
-                .sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts)
-                .map((row) =>
-                  row.kind === "e" ? (
-                    <li key={row.e.eid}>
-                      <button
-                        type="button"
-                        className="card flex w-full items-center gap-3 p-3 text-left"
-                        onClick={() => go(`/g/${saved.gid}/e/${row.e.eid}`)}
-                      >
-                        <div className="w-10 shrink-0 text-center text-xs leading-tight text-stone-500">
-                          {new Date(`${row.e.date}T12:00`).toLocaleDateString(undefined, {
-                            month: "short",
-                          })}
-                          <div className="text-lg font-semibold text-stone-800 dark:text-stone-200">
-                            {row.e.date.slice(8)}
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">{row.e.desc}</div>
-                          <div className="truncate text-xs text-stone-500">
-                            {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
-                            <Money v={row.e.amount} c={row.e.currency} />
-                          </div>
-                        </div>
-                        <MyShare e={row.e} me={me} />
-                      </button>
-                    </li>
-                  ) : (
-                    <li
-                      key={row.p.pid}
-                      className="card flex items-center gap-3 p-3 text-sm text-stone-600 dark:text-stone-300"
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="meta mb-1">
+                    {heroLabel}
+                    {approx && (
+                      <span className="text-faint">
+                        {" "}
+                        · ≈ {ratesDay ? `${ratesDay} rates` : "today's rates"}
+                      </span>
+                    )}
+                  </div>
+                  {myNets.map(([c, v], i) => (
+                    <div
+                      key={c}
+                      className={`truncate leading-tight font-extrabold tracking-tight ${i === 0 ? "text-[clamp(1.75rem,9vw,3rem)]" : "text-xl"}`}
                     >
-                      <span className="w-10 text-center" aria-hidden="true">
-                        ↔
-                      </span>
-                      <span className="flex-1">
-                        {name(row.p.from)} paid {name(row.p.to)}{" "}
-                        <Money v={row.p.amount} c={row.p.currency} />
-                      </span>
-                    </li>
-                  ),
-                )}
-            </ul>
-          )}
-
-          {tab === "balances" && (
-            <div className="space-y-4">
-              <ul className="card divide-y divide-stone-200 dark:divide-stone-800">
-                {state.members.map((m) => {
-                  const nets = netOf(m.mid);
-                  return (
-                    <li key={m.mid} className="flex items-center gap-3 p-3">
-                      <Avatar name={m.name} />
-                      <span className="flex-1">
-                        {m.name}
-                        {m.mid === me && <span className="text-stone-400"> (you)</span>}
-                      </span>
-                      {nets.length === 0 ? (
-                        <span className="text-sm text-stone-400">settled</span>
-                      ) : (
-                        <span className="text-right text-sm">
-                          {nets.map(([c, v]) => (
-                            <div key={c}>
-                              <Money v={v} c={c} signed />{" "}
-                              <span className="text-xs text-stone-500">
-                                {v > 0 ? "gets back" : "owes"}
-                              </span>
-                            </div>
-                          ))}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-              {multi && (
-                <p className="text-xs text-stone-500">
-                  {converted
-                    ? `Converted to ${cur} at ECB reference rates${rates?.date ? ` of ${rates.date}` : ""}.`
-                    : "Rates are not available. Each currency settles on its own."}
-                </p>
+                      <Money v={v} c={c} signed={!allPos && !allNeg} tone={allPos || allNeg} />
+                    </div>
+                  ))}
+                  {counterparts && <div className="meta mt-2">{counterparts}</div>}
+                </>
               )}
-              <div>
-                <h2 className="mb-2 font-medium">Fewest payments to settle</h2>
-                {plan.length === 0 ? (
-                  <p className="card p-4 text-stone-500">Everyone is settled up.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {plan.map((t) => (
-                      <li
-                        key={`${t.from}-${t.to}-${t.currency}`}
-                        className="card flex items-center gap-3 p-3"
-                      >
-                        <span className="flex-1 text-sm">
-                          <b>{name(t.from)}</b> pays <b>{name(t.to)}</b>{" "}
-                          <Money v={t.amount} c={t.currency} />
-                        </span>
-                        <button
-                          type="button"
-                          className="btn-ghost border border-stone-300 px-3 py-1.5 text-sm dark:border-stone-700"
-                          onClick={() =>
-                            go(`/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`)
-                          }
-                        >
-                          Record
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+            </button>
           )}
 
-          <div className="fixed inset-x-0 bottom-0 flex justify-center gap-3 bg-gradient-to-t from-stone-50 via-stone-50/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:from-stone-950 dark:via-stone-950/90">
-            <button
-              type="button"
-              className="btn-ghost border border-stone-300 bg-white dark:border-stone-700 dark:bg-stone-900"
-              onClick={() => go(`/g/${saved.gid}/settle`)}
-            >
-              Settle up
-            </button>
-            <button
-              type="button"
-              className="btn-primary px-6 shadow-lg"
-              onClick={() => go(`/g/${saved.gid}/add`)}
-            >
-              + Add expense
-            </button>
+          <div className="mb-4">
+            <Tabs
+              id="gtab"
+              options={[
+                { id: "expenses", label: "Expenses" },
+                { id: "balances", label: "Balances" },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
+          </div>
+
+          <TabPanel id="gtab" value={tab}>
+            {tab === "expenses" &&
+              (months.length === 0 ? (
+                <div className="py-16 text-center">
+                  <p className="text-lg font-bold">Nothing spent yet</p>
+                  <p className="mt-2 text-sm text-muted">Tap “Add expense” below.</p>
+                </div>
+              ) : (
+                <div className="-mx-4">
+                  {months.map((d) => (
+                    <section key={d.month}>
+                      <h3 className="day-head">{monthLabel(d.month)}</h3>
+                      <ul>
+                        {d.items.map((row, i) => [
+                          showMark(d.items, i) ? (
+                            <li key={`d-${row.date}`} className="day-mark" aria-hidden="true">
+                              {dayMark(row.date)}
+                            </li>
+                          ) : null,
+                          row.kind === "e" ? (
+                            <li
+                              key={row.e.eid}
+                              className={gapBefore(d.items, i) ? "mt-3" : undefined}
+                            >
+                              <button
+                                type="button"
+                                className="row press active:bg-panel"
+                                onClick={() => go(`/g/${saved.gid}/e/${row.e.eid}`)}
+                              >
+                                <CategoryIcon c={row.e.category} />
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate font-bold">{row.e.desc}</div>
+                                  <div className="truncate text-[13px] text-muted">
+                                    {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
+                                    <Money v={row.e.amount} c={row.e.currency} />
+                                    {daySuffix(row.e.date)}
+                                  </div>
+                                </div>
+                                <MyShare e={row.e} me={me} />
+                              </button>
+                            </li>
+                          ) : (
+                            <li
+                              key={row.p.pid}
+                              className={gapBefore(d.items, i) ? "mt-3" : undefined}
+                            >
+                              <button
+                                type="button"
+                                className="row press active:bg-panel"
+                                onClick={() => go(`/g/${saved.gid}/p/${row.p.pid}`)}
+                              >
+                                <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
+                                <div className="min-w-0 flex-1">
+                                  <Pair from={name(row.p.from)} to={name(row.p.to)} />
+                                  <div className="text-[13px] text-muted">
+                                    Payment{daySuffix(row.p.date)}
+                                  </div>
+                                </div>
+                                <span className="num shrink-0 text-sm font-bold text-fg-2">
+                                  <Money v={row.p.amount} c={row.p.currency} />
+                                </span>
+                              </button>
+                            </li>
+                          ),
+                        ])}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              ))}
+
+            {tab === "balances" && (
+              <div className="space-y-6">
+                <ul className="-mx-4">
+                  {[...state.members]
+                    .sort((a, b) => Number(b.mid === me) - Number(a.mid === me))
+                    .map((m) => {
+                      const i = idx(m.mid);
+                      const nets = netOf(m.mid);
+                      return (
+                        <li key={m.mid} className="row">
+                          <Avatar name={m.name} i={i} />
+                          <span className="min-w-0 flex-1 truncate font-bold">
+                            {m.mid === me ? "You" : m.name}
+                          </span>
+                          <span className="text-right font-bold">
+                            {nets.length === 0 ? (
+                              <span className="text-muted">—</span>
+                            ) : (
+                              nets.map(([c, v]) => (
+                                <div key={c}>
+                                  <Money v={v} c={c} signed />
+                                </div>
+                              ))
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                </ul>
+
+                <section id="settle-up">
+                  <h3 className="meta mb-2 pt-2">
+                    Settle up
+                    {perCurrency && <span className="text-faint"> · each currency on its own</span>}
+                  </h3>
+                  {plan.length === 0 ? (
+                    <p className="py-8 text-center font-bold text-muted">
+                      {empty ? "Nothing spent yet" : "All settled"}
+                    </p>
+                  ) : (
+                    <ul className="-mx-4">
+                      {[...plan]
+                        .sort((a, b) => Number(isMine(b)) - Number(isMine(a)))
+                        .map((t) => {
+                          const mine = t.from === me || t.to === me;
+                          return (
+                            <li key={`${t.from}-${t.to}-${t.currency}`} className="row">
+                              <Avatar name={realName(t.from)} i={idx(t.from)} />
+                              <div className={`min-w-0 flex-1 ${mine ? "" : "text-fg-2"}`}>
+                                <Pair from={name(t.from)} to={name(t.to)} />
+                                <div
+                                  className={`truncate text-lg ${mine ? "font-extrabold" : "font-semibold"}`}
+                                >
+                                  <Money v={t.amount} c={t.currency} />
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                aria-label={`Mark paid: ${name(t.from)} to ${name(t.to)}`}
+                                onClick={() => go(settleLink(t))}
+                              >
+                                Mark paid
+                              </button>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  )}
+                </section>
+              </div>
+            )}
+          </TabPanel>
+
+          <div className="bottom-bar">
+            <div className="mx-auto grid max-w-xl grid-cols-[1fr_2fr] gap-3">
+              <button
+                type="button"
+                className="btn-secondary min-w-0"
+                disabled={plan.length === 0}
+                onClick={() => {
+                  const mine = myDebt ?? myCredits[0];
+                  if (mine) return go(settleLink(mine));
+                  setTab("balances");
+                  setTimeout(
+                    () =>
+                      document.getElementById("settle-up")?.scrollIntoView({
+                        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+                          ? "auto"
+                          : "smooth",
+                      }),
+                    50,
+                  );
+                }}
+              >
+                <span className="truncate">
+                  {myDebt ? `Pay ${realName(myDebt.to)}` : "Settle up"}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => go(`/g/${saved.gid}/add`)}
+              >
+                <Icon name="plus" size={18} /> Add expense
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -281,11 +450,30 @@ function MyShare({
     owed = 0;
   }
   const net = (e.paidBy[me] ?? 0) - owed;
-  if (net === 0) return <span className="text-xs text-stone-400">not involved</span>;
+  // In the split or a payer. A rounded share of 0 still counts as in it.
+  const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
+  // One style for every state: a short lowercase word, with the amount under it when there is one.
+  if (!inIt) return <span className="shrink-0 text-[13px] text-faint">not in it</span>;
+  if (net === 0) return <span className="shrink-0 text-[13px] text-muted">even</span>;
+  // History, not a debt now: neutral colours, one short word for your side of this expense.
   return (
-    <span className="text-right text-xs">
-      <div className="text-stone-500">{net > 0 ? "you lent" : "you owe"}</div>
-      <Money v={net} c={e.currency} signed />
+    // Two short lines, label over amount, so the column stays narrow and the description has room.
+    <span className="num flex shrink-0 flex-col items-end text-sm font-bold text-fg-2">
+      <span className="text-xs font-normal text-muted">{net > 0 ? "you lent" : "you owe"}</span>
+      {formatMoney(Math.abs(net), e.currency)}
     </span>
+  );
+}
+
+/** "Aarav → Kabir", with full names so two people with one initial stay clear. */
+function Pair({ from, to }: { from: string; to: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 text-sm font-bold">
+      <span className="truncate">{from}</span>
+      <span className="shrink-0 text-muted">
+        <Icon name="arrow" size={14} />
+      </span>
+      <span className="truncate">{to}</span>
+    </div>
   );
 }

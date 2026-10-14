@@ -1,18 +1,26 @@
 import { formatMoney, type GroupSecret, newId, owedShares, toMajor } from "@rata/core";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
-import { Avatar, Header } from "../lib/ui";
+import { toast } from "../lib/toast";
+import { Avatar, Header, Icon } from "../lib/ui";
 
 export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
   const { state, sync } = useGroup(saved);
   const [newName, setNewName] = useState("");
   const [gname, setGname] = useState(state.group?.name ?? "");
+  const [edited, setEdited] = useState(false);
+  const pendingRename = useRef<Promise<void>>(Promise.resolve());
   const g = state.group;
+  const loadedName = g?.name;
+  // Follow renames from other devices until this person types in the field.
+  useEffect(() => {
+    if (loadedName && !edited) setGname(loadedName);
+  }, [loadedName, edited]);
 
   const addMember = async () => {
-    if (!newName.trim()) return;
-    await sync?.add([
+    if (!sync || !newName.trim()) return;
+    await sync.add([
       {
         t: "member",
         id: newId(),
@@ -22,11 +30,12 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
         name: newName.trim(),
       },
     ]);
+    toast(`Added ${newName.trim()}`);
     setNewName("");
   };
 
   const rename = async () => {
-    if (!g || !gname.trim()) return;
+    if (!g || !gname.trim() || gname.trim() === g.name) return;
     await sync?.add([
       {
         t: "group",
@@ -39,6 +48,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
       },
     ]);
     await storage.upsertGroup({ ...saved, name: gname.trim() });
+    toast("Name saved");
   };
 
   const exportCsv = () => {
@@ -89,8 +99,10 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
       )
     )
       return;
+    await pendingRename.current;
     await storage.removeGroup(saved.gid);
     go("/");
+    toast(`Removed ${g?.name ?? saved.name} from this device`);
   };
 
   const total: Record<string, number> = {};
@@ -104,42 +116,53 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
           <label className="label" htmlFor="gname">
             Group name
           </label>
-          <div className="flex gap-2">
-            <input
-              id="gname"
-              className="field"
-              value={gname}
-              onChange={(e) => setGname(e.target.value)}
-            />
-            <button
-              type="button"
-              className="btn-ghost border border-stone-300 dark:border-stone-700"
-              onClick={rename}
-            >
-              Save
-            </button>
-          </div>
-          <p className="text-sm text-stone-500">
-            Main currency {g?.currency} · Total spent{" "}
-            {Object.entries(total)
-              .map(([c, v]) => formatMoney(v, c))
-              .join(" + ") || "none"}
-          </p>
+          <input
+            id="gname"
+            className="field text-lg font-bold"
+            value={gname}
+            onChange={(e) => {
+              setGname(e.target.value);
+              setEdited(true);
+            }}
+            onBlur={() => {
+              if (edited && gname.trim() && gname.trim() !== g?.name) {
+                pendingRename.current = pendingRename.current.then(rename).catch(() => undefined);
+              }
+              setEdited(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+          />
         </section>
+        <dl className="-mx-4">
+          <div className="row">
+            <dt className="flex-1 text-muted">Total spent</dt>
+            <dd className="num min-w-0 text-right font-bold">
+              {Object.keys(total).length
+                ? Object.entries(total).map(([c, v]) => <div key={c}>{formatMoney(v, c)}</div>)
+                : formatMoney(0, g?.currency ?? "INR")}
+            </dd>
+          </div>
+          <div className="row">
+            <dt className="flex-1 text-muted">Main currency</dt>
+            <dd className="font-bold">{g?.currency}</dd>
+          </div>
+        </dl>
         <section>
-          <h2 className="mb-2 font-medium">People</h2>
-          <ul className="card divide-y divide-stone-200 dark:divide-stone-800">
-            {state.members.map((m) => (
-              <li key={m.mid} className="flex items-center gap-3 p-3">
-                <Avatar name={m.name} />
-                {m.name}
-                {m.mid === saved.me && <span className="text-stone-400">(you)</span>}
+          <h2 className="meta mb-2">People</h2>
+          <ul className="-mx-4">
+            {state.members.map((m, i) => (
+              <li key={m.mid} className="row">
+                <Avatar name={m.name} i={i} />
+                <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
+                {m.mid === saved.me && <span className="meta">You</span>}
               </li>
             ))}
           </ul>
           <div className="mt-2 flex gap-2">
             <input
-              className="field"
+              className="field min-w-0"
               placeholder="Add a person"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -147,26 +170,17 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
             />
             <button
               type="button"
-              className="btn-ghost border border-stone-300 dark:border-stone-700"
+              className="btn-secondary"
+              aria-label="Add person"
+              disabled={!newName.trim()}
               onClick={addMember}
             >
-              Add
+              <Icon name="plus" size={18} />
             </button>
           </div>
         </section>
         <section className="space-y-2">
-          <button
-            type="button"
-            className="btn-ghost w-full border border-stone-300 dark:border-stone-700"
-            onClick={() => go(`/g/${saved.gid}/invite`)}
-          >
-            Invite link
-          </button>
-          <button
-            type="button"
-            className="btn-ghost w-full border border-stone-300 dark:border-stone-700"
-            onClick={exportCsv}
-          >
+          <button type="button" className="btn-secondary w-full" onClick={exportCsv}>
             Export CSV
           </button>
           <button type="button" className="btn-ghost w-full text-owes" onClick={leave}>

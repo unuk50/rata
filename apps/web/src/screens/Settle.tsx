@@ -1,113 +1,181 @@
-import { type GroupSecret, newId, parseAmount } from "@rata/core";
-import { useState } from "react";
+import { formatMoney, type GroupSecret, newId, parseAmount } from "@rata/core";
+import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { CURRENCIES, Header, today } from "../lib/ui";
+import { toast } from "../lib/toast";
+import {
+  AmountField,
+  amountInput,
+  CURRENCIES,
+  Header,
+  Icon,
+  Notice,
+  PeoplePicker,
+  reAmount,
+  today,
+} from "../lib/ui";
 
-export function Settle({ saved, prefill }: { saved: SavedGroup & GroupSecret; prefill: string[] }) {
+export function Settle({
+  saved,
+  prefill = [],
+  pid,
+}: {
+  saved: SavedGroup & GroupSecret;
+  prefill?: string[];
+  pid?: string;
+}) {
   const { state, sync } = useGroup(saved);
   const [pf, pt, pa, pc] = prefill;
-  const cur0 = pc ?? state.group?.currency ?? "USD";
   const [from, setFrom] = useState(pf ?? saved.me ?? "");
   const [to, setTo] = useState(pt ?? "");
-  const [currency, setCurrency] = useState(cur0);
-  const [amount, setAmount] = useState(
-    pa
-      ? String(
-          Number(pa) /
-            10 **
-              (new Intl.NumberFormat("en", { style: "currency", currency: cur0 }).resolvedOptions()
-                .maximumFractionDigits ?? 2),
-        )
-      : "",
-  );
+  const [currency, setCurrency] = useState(pc ?? "");
+  const [amount, setAmount] = useState(pa && pc ? amountInput(Number(pa), pc) : "");
   const [error, setError] = useState("");
+  const [init, setInit] = useState(!pid);
+  const existing = pid ? state.payments.find((p) => p.pid === pid) : undefined;
   const members = state.members;
-  const toId = to || members.find((m) => m.mid !== from)?.mid || "";
+
+  if (!init && existing) {
+    setInit(true);
+    setFrom(existing.from);
+    setTo(existing.to);
+    setCurrency(existing.currency);
+    setAmount(amountInput(existing.amount, existing.currency));
+  }
+
+  // A changed input makes the old error wrong, so clear it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these inputs reset the error
+  useEffect(() => setError(""), [from, to, amount, currency]);
+  const cur = currency || state.group?.currency || "USD";
+  const toId = to && to !== from ? to : members.find((m) => m.mid !== from)?.mid || "";
+
+  const who = (mid: string) =>
+    mid === saved.me ? "you" : (members.find((m) => m.mid === mid)?.name ?? "?");
 
   const save = async () => {
-    const v = parseAmount(amount, currency);
-    if (!v || v <= 0) return setError("Enter an amount above zero.");
+    const v = parseAmount(amount, cur);
+    if (!v || v <= 0) return setError("Enter an amount.");
+    if (!toId) return setError("Add someone to pay first.");
     if (from === toId) return setError("Pick two different people.");
-    await sync?.add([
+    if (!sync) return setError("Still loading. Try again.");
+    await sync.add([
       {
         t: "payment",
         id: newId(),
         ts: Date.now(),
         by: saved.me,
-        pid: newId(),
+        pid: existing?.pid ?? newId(),
         from,
         to: toId,
         amount: v,
-        currency,
-        date: today(),
+        currency: cur,
+        date: existing?.date ?? today(),
       },
     ]);
     go(`/g/${saved.gid}`);
+    const line = `${from === saved.me ? "You" : who(from)} paid ${who(toId)} ${formatMoney(v, cur)}`;
+    toast(existing ? `Saved: ${line}` : line);
   };
 
+  const remove = async () => {
+    if (!existing || !sync) return;
+    await sync.add([
+      { t: "payment.del", id: newId(), ts: Date.now(), by: saved.me, pid: existing.pid },
+    ]);
+    go(`/g/${saved.gid}`);
+    toast(`Deleted payment to ${who(existing.to)}`, {
+      label: "Undo",
+      run: () => void sync.add([{ ...existing, id: newId(), ts: Date.now(), by: saved.me }]),
+    });
+  };
+
+  if (pid && !existing && state.group) {
+    return (
+      <div>
+        <Header title="Payment" back={`/g/${saved.gid}`} />
+        <Notice
+          icon="x"
+          text="This payment was deleted."
+          action="Back to group"
+          to={`/g/${saved.gid}`}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <Header title="Record a payment" back={`/g/${saved.gid}`} />
-      <div className="space-y-4">
-        <div>
-          <label className="label" htmlFor="from">
-            Who paid
-          </label>
+    <div className="pb-36">
+      <Header
+        title={existing ? "Edit payment" : "Record a payment"}
+        back={`/g/${saved.gid}`}
+        right={
+          existing && (
+            <button type="button" className="btn-ghost btn-sm text-owes" onClick={remove}>
+              Delete
+            </button>
+          )
+        }
+      />
+      <div className="space-y-6">
+        <div className="flex flex-col items-center gap-1 pt-2 pb-4">
           <select
-            id="from"
-            className="field"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          >
-            {members.map((m) => (
-              <option key={m.mid} value={m.mid}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label" htmlFor="to">
-            To whom
-          </label>
-          <select id="to" className="field" value={toId} onChange={(e) => setTo(e.target.value)}>
-            {members
-              .filter((m) => m.mid !== from)
-              .map((m) => (
-                <option key={m.mid} value={m.mid}>
-                  {m.name}
-                </option>
-              ))}
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <select
-            className="field w-28"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
+            className="select-plain text-sm"
+            value={cur}
+            onChange={(e) => {
+              setAmount(reAmount(amount, cur, e.target.value));
+              setCurrency(e.target.value);
+            }}
             aria-label="Currency"
           >
             {CURRENCIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
-          <input
-            className="field num flex-1 text-right text-lg"
-            inputMode="decimal"
-            placeholder="0.00"
+          <AmountField
+            cur={cur}
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            aria-label="Amount"
+            onChange={setAmount}
+            onBlur={() => {
+              const v = parseAmount(amount, cur);
+              if (v) setAmount(amountInput(v, cur));
+            }}
           />
         </div>
-        <p className="text-xs text-stone-500">
-          Pay with any app you like. Rata records the payment. It does not move money.
-        </p>
-        {error && <p className="text-sm text-owes">{error}</p>}
-        <button type="button" className="btn-primary w-full py-3" onClick={save}>
-          Save payment
-        </button>
+        <section>
+          <h2 className="meta mb-2">From</h2>
+          <PeoplePicker
+            label="From"
+            people={members}
+            me={saved.me}
+            selected={(mid) => mid === from}
+            onToggle={setFrom}
+          />
+        </section>
+        <div className="flex justify-center text-muted" aria-hidden="true">
+          <span className="rotate-90">
+            <Icon name="arrow" />
+          </span>
+        </div>
+        <section>
+          <h2 className="meta mb-2">To</h2>
+          <PeoplePicker
+            label="To"
+            people={members}
+            disabled={(mid) => mid === from}
+            me={saved.me}
+            selected={(mid) => mid === toId}
+            onToggle={setTo}
+          />
+        </section>
+        <p className="meta text-center">Records only. No money moves.</p>
+      </div>
+      <div className="bottom-bar">
+        <div className="mx-auto max-w-xl">
+          {error && <p className="mb-2 text-sm text-owes">{error}</p>}
+          <button type="button" className="btn-primary w-full" onClick={save} disabled={!sync}>
+            Save payment
+          </button>
+        </div>
       </div>
     </div>
   );

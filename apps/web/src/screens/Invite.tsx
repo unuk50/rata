@@ -1,8 +1,44 @@
 import { encodeInvite, type GroupSecret } from "@rata/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Header } from "../lib/ui";
+import { Header, Icon } from "../lib/ui";
+
+/** Square QR code drawn as one SVG path. The library loads only on this screen. */
+function Qr({ text }: { text: string }) {
+  const [path, setPath] = useState<{ d: string; n: number } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void import("qrcode-generator").then(({ default: qrcode }) => {
+      const qr = qrcode(0, "M");
+      qr.addData(text);
+      qr.make();
+      const n = qr.getModuleCount();
+      let d = "";
+      for (let r = 0; r < n; r++)
+        for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c} ${r}h1v1h-1z`;
+      if (live) setPath({ d, n });
+    });
+    return () => {
+      live = false;
+    };
+  }, [text]);
+  return (
+    <div className="qr mx-auto aspect-square w-60">
+      {path && (
+        <svg
+          // Four white modules on each side: the quiet zone scanners need.
+          viewBox={`-4 -4 ${path.n + 8} ${path.n + 8}`}
+          className="h-full w-full"
+          role="img"
+          aria-label="Invite QR code"
+        >
+          <path d={path.d} fill="#0d0d0d" shapeRendering="crispEdges" />
+        </svg>
+      )}
+    </div>
+  );
+}
 
 export function Invite({ saved }: { saved: SavedGroup & GroupSecret }) {
   const { state } = useGroup(saved);
@@ -10,57 +46,57 @@ export function Invite({ saved }: { saved: SavedGroup & GroupSecret }) {
   const [copied, setCopied] = useState(false);
   const name = state.group?.name ?? saved.name;
 
-  const share = async () => {
-    const data = {
-      title: `Join ${name} on Rata`,
-      text: `Join "${name}" on Rata to split costs:`,
-      url: link,
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(data);
-        return;
-      } catch {
-        // The person closed the share sheet. Copy instead.
-      }
-    }
+  const copy = async () => {
     await navigator.clipboard.writeText(link);
     setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const share = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${name} on Rata`, url: link });
+        return;
+      } catch (err) {
+        // The person closed the share sheet: do nothing. Other errors: copy instead.
+        if ((err as Error).name === "AbortError") return;
+      }
+    }
+    await copy();
   };
 
   return (
-    <div>
-      <Header title="Invite people" back={`/g/${saved.gid}`} />
-      <div className="space-y-4">
-        <p>
-          Send this link to the people in <b>{name}</b>. Anyone with the link can see and add
-          expenses.
+    <div className="pb-10">
+      <Header title="Invite" back={`/g/${saved.gid}`} />
+      <div className="space-y-6 text-center">
+        <h2 className="text-3xl font-extrabold tracking-tight">{name}</h2>
+        <Qr text={link} />
+        <p className="meta flex items-center justify-center gap-2">
+          <Icon name="lock" size={14} /> Only people with this link can open it
         </p>
-        <div className="card break-all p-3 font-mono text-xs text-stone-600 dark:text-stone-300">
-          {link}
-        </div>
         <div className="flex gap-2">
           <button type="button" className="btn-primary flex-1" onClick={share}>
-            {copied ? "Copied" : "Share link"}
+            Share link
           </button>
           <button
             type="button"
-            className="btn-ghost border border-stone-300 dark:border-stone-700"
-            onClick={async () => {
-              await navigator.clipboard.writeText(link);
-              setCopied(true);
-            }}
+            className="btn-secondary w-12 px-0"
+            onClick={copy}
+            aria-label="Copy link"
           >
-            Copy
+            <Icon name={copied ? "check" : "copy"} size={18} />
           </button>
         </div>
-        <div className="rounded-xl bg-brand-soft/50 p-3 text-sm text-teal-900 dark:bg-teal-950 dark:text-teal-100">
-          The part after <code>#</code> is the group key. Browsers never send it to our server, so
-          only people with the link can read this group.
-        </div>
         <button type="button" className="btn-ghost w-full" onClick={() => go(`/g/${saved.gid}`)}>
-          Go to the group
+          Done <Icon name="arrow" size={16} />
         </button>
+        <input
+          className="sr-only"
+          readOnly
+          value={link}
+          aria-label="Invite link"
+          data-invite-link
+        />
       </div>
     </div>
   );
