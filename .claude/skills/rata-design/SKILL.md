@@ -1,6 +1,6 @@
 ---
 name: rata-design
-description: Use for any change to the Rata web UI (screens, components, styles, icons, copy). Keeps every screen in the Rata design language, a dark NeoPOP-style system with square edges and 3D pop buttons.
+description: Use for any change to the Rata web UI (screens, components, styles, icons, copy). Keeps every screen in the Rata design language, a dark NeoPOP-style system with soft borderless surfaces and 3D pop buttons.
 ---
 
 # Rata design skill
@@ -15,7 +15,7 @@ Read `docs/design.md` before you change UI. It is the source of truth. This skil
 ## Hard rules
 
 - Colours come only from the tokens: `ink`, `panel`, `raised`, `line`, `line-strong`, `fg`, `fg-2`, `muted`, `faint`, `accent`, `accent-edge`, `on-accent`, `owed`, `owes`, `warn`, `info`. No hex values and no Tailwind palette colours (`stone-*`, `teal-*`, `gray-*` and so on) in components.
-- No `rounded-*` classes. No `shadow-*` classes. Depth comes only from the `pop` edge on buttons.
+- No `rounded-*`, `border` or `shadow-*` classes in screens. Shape comes from the utilities (`card`, `field`, `tile`, `avatar`, `chip`) and the radius tokens. Depth comes only from the `pop` edge on buttons and the toast.
 - No `dark:` variants. The app is dark only.
 - One `btn-primary` on each screen, for the main action. Others are `btn-secondary` or `btn-ghost`.
 - Labels and section titles use `caps`. Amounts use `num` and weight 800 when they are the focus.

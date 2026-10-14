@@ -1,6 +1,6 @@
 # Rata design language
 
-Rata is dark, direct and tactile. The design borrows ideas from **NeoPOP**, the open-source design system from CRED (Apache-2.0, [github.com/CRED-CLUB/neopop-web](https://github.com/CRED-CLUB/neopop-web)): black surfaces, strong type, hard square edges, and 3D "pop" buttons that move down when you press them.
+Rata is dark, direct and tactile. The design borrows ideas from **NeoPOP**, the open-source design system from CRED (Apache-2.0, [github.com/CRED-CLUB/neopop-web](https://github.com/CRED-CLUB/neopop-web)): black surfaces, strong type and 3D "pop" buttons that move down when you press them.
 
 We use the ideas and the open palette only. We do not use the CRED name, logo, illustrations or proprietary fonts. Rata has its own accent colour and its own font.
 
@@ -14,9 +14,12 @@ All tokens are in [`apps/web/src/index.css`](../apps/web/src/index.css) (`@theme
 |---|---|---|
 | `ink` | `#0d0d0d` | Page background |
 | `panel` | `#121212` | Card |
-| `raised` | `#161616` | Field, tab track, row hover |
-| `line` | white 10% | Card border, dividers |
-| `line-strong` | `#3d3d3d` | Field border, edge of a neutral pop |
+| `raised` | `#1a1a1a` | Field, tab track, row hover |
+| `raised-2` | `#232323` | Field in focus, secondary button, toast |
+| `line` | white 10% | Dividers between rows |
+| `line-strong` | `#3d3d3d` | Edge of a neutral pop |
+| `radius-surface` | 16 px | Cards, tiles, sheets |
+| `radius-control` | 12 px | Fields, buttons, tabs |
 | `fg` / `fg-2` / `muted` / `faint` | white 90 / 70 / 50 / 30% | Heading / body / label / hint |
 | `accent` | `#e5fe40` | The **one** main action on a screen. Selection. |
 | `accent-edge` | `#a0b22d` | 3D edge of an accent button |
@@ -28,8 +31,8 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 
 ## Rules
 
-1. **Square edges.** No rounded corners on cards, fields, buttons or avatars.
-2. **One accent action per screen.** It uses `btn-primary`. Other actions use `btn-secondary` (white outline pop) or `btn-ghost` (text only).
+1. **Soft and borderless.** Surfaces and controls are filled shapes with the two radius tokens. No borders on cards, fields or dropdowns; a field gets lighter in focus. Avatars are round. Space follows an 8 px grid with a 16 px side gutter. Put radius and shape in `index.css` utilities, not in screens.
+2. **One accent action per screen.** It uses `btn-primary`. Other actions use `btn-secondary` (grey pop) or `btn-ghost` (text only).
 3. **Pop for actions only.** A pop edge means "you can press this". Do not put a pop edge on a card or a static item.
 4. **Labels are caps.** Field labels, section titles and small meta text use `caps` (11 px, 800, wide tracking, `muted`).
 5. **Money is big and bold.** A balance uses 800 weight and tabular numbers (`num`). Green and red show only the direction of money, not decoration.
@@ -49,23 +52,27 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 
 | Class or component | Use |
 |---|---|
-| `card` | A group of related items. Border `line`, background `panel`. |
+| `card` | A group of related items. Background `panel`, `radius-surface`, no border. |
 | `divider` | Lines between rows in a card. |
 | `row` | A full-width list row (avatar, text, value). |
 | `btn-primary` | Accent pop button. One per screen. |
-| `btn-secondary` | Outline pop button. |
+| `btn-secondary` | Grey pop button. |
 | `btn-danger` | Red pop button for a destructive final step. |
 | `btn-ghost` | Text button: back, delete link, low-priority actions. |
 | `btn-sm` | Smaller size for buttons in a row. |
-| `field`, `label` | Input, select, textarea, and their label. |
+| `field`, `label` | Input, select, textarea, and their label. No border. |
+| `select-plain` | A select that reads as text with a chevron, for the currency above an amount. |
+| `chip` | A round name chip that you can remove. |
+| `toast` | The floating message bar from `toast()`. |
+| `tile`, `avatar` | Group tile on Home; round person initial. |
 | `<Tabs>` + `<TabPanel>` | Switch between views or split methods. Selected tab is solid white. Give both the same `id`. |
-| `<PeoplePicker>` | A row of avatar tiles to tap. Selected tiles get the accent edge. Single or multi select. |
+| `<PeoplePicker>` | A row of avatars to tap. Selected avatars get an accent ring. Single or multi select. |
 | `<Icon>`, `<IconButton>` | Square-cap line icons. Icon buttons are 44 × 44 px. |
 | `amount` | The big amount input on money screens. |
 | `person`, `person-on` | Tile styles used by `<PeoplePicker>`. |
 | `btn-icon` | 44 × 44 px text-only icon button. |
 | `choice`, `choice-on` | A large option card (for example the event type). |
-| `<Avatar>` | Square initial. Pass `i` (index in the group) for a unique colour. |
+| `<Avatar>` | Round initial. Pass `i` (index in the group) for a unique colour. |
 | `<Money>` | Formatted amount. `signed` adds the owed and owes colour. |
 | `<Header>` | Sticky screen title with back and right actions. |
 | `caps`, `title`, `num` | Label text, page title, tabular numbers. |

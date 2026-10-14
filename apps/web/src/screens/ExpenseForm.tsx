@@ -226,7 +226,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     if (!sync) return setError("Still loading. Try again.");
     await sync.add([e]);
     go(`/g/${saved.gid}`);
-    toast(existing ? "Saved" : `Added “${e.desc}”`);
+    toast(existing ? `Saved “${e.desc}”` : `Added “${e.desc}”`);
   };
 
   const remove = async () => {
@@ -272,7 +272,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   const isToday = date === today();
 
   return (
-    <div className="pb-28">
+    <div className="pb-36">
       <Header
         title={existing ? "Edit expense" : "Add expense"}
         back={`/g/${saved.gid}`}
@@ -285,10 +285,11 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         }
       />
       <div className="space-y-6">
-        <div className="card flex items-center gap-2 p-3">
+        {/* Amount first and big, centred; the currency reads as text above it. */}
+        <div className="flex flex-col items-center gap-1 pt-2 pb-4">
           <select
             id="cur"
-            className="field w-24 shrink-0 font-extrabold"
+            className="select-plain text-sm tracking-wide"
             value={cur}
             onChange={(e) => {
               const to = e.target.value;
@@ -327,7 +328,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
           </select>
           <input
             id="amt"
-            className="amount"
+            className="amount text-center"
             inputMode="decimal"
             placeholder={zero(cur)}
             aria-label="Amount"
@@ -386,8 +387,9 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                 </div>
               ))}
               {total !== null && (
-                <div className="caps p-2 text-right">
+                <div className={`caps p-2 text-right ${paidSoFar === total ? "" : "text-owes"}`}>
                   Paid {formatMoney(paidSoFar, cur)} of {formatMoney(total, cur)}
+                  {paidSoFar < total && ` · ${formatMoney(total - paidSoFar, cur)} left`}
                 </div>
               )}
             </div>

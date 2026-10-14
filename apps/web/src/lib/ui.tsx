@@ -167,7 +167,7 @@ export function Header({
   right?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-10 -mx-4 mb-5 flex items-center gap-1 border-b border-line bg-ink/90 px-2 py-1.5 backdrop-blur">
+    <header className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-1 bg-ink/90 px-2 py-1.5 backdrop-blur">
       {back !== undefined ? (
         <IconButton icon="back" label="Back" onClick={() => go(back)} />
       ) : (
@@ -206,21 +206,19 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-// No greens or reds: those mean money owed and money due.
-// Ten hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
-const HUES = [24, 200, 290, 235, 330, 175, 50, 265, 310, 215];
+// Eight hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
+// People 9 and up reuse a hue at a different lightness.
+const HUES = [24, 200, 290, 235, 330, 175, 265, 310];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
-  const hue = HUES[(i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0)) % HUES.length] ?? 0;
+  const n = i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const hue = HUES[n % HUES.length] ?? 0;
+  const light = Math.floor(n / HUES.length) % 2 === 0 ? 24 : 36;
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center border font-extrabold ${big ? "h-12 w-12 text-lg" : "h-9 w-9 text-sm"}`}
-      style={{
-        background: `hsl(${hue} 60% 14%)`,
-        borderColor: `hsl(${hue} 70% 50%)`,
-        color: `hsl(${hue} 90% 80%)`,
-      }}
+      className={`avatar ${big ? "h-12 w-12 text-lg" : "h-9 w-9 text-sm"}`}
+      style={{ background: `hsl(${hue} 45% ${light}%)`, color: `hsl(${hue} 90% 85%)` }}
       aria-hidden="true"
     >
       {name.trim().charAt(0).toUpperCase() || "?"}
@@ -312,12 +310,12 @@ export function ToastBar({ raised }: { raised: boolean }) {
     <output
       className={`fixed inset-x-0 z-20 block px-4 ${raised ? "bottom-24" : "bottom-[max(1rem,env(safe-area-inset-bottom))]"}`}
     >
-      <div className="mx-auto flex max-w-xl items-center gap-3 border-2 border-ink bg-white px-4 py-2 text-ink outline outline-1 outline-line-strong">
+      <div className="toast mx-auto max-w-xl">
         <span className="min-w-0 flex-1 truncate text-sm font-bold">{t.text}</span>
         {t.action && (
           <button
             type="button"
-            className="min-h-11 px-2 text-sm font-extrabold tracking-wide uppercase underline underline-offset-4"
+            className="min-h-11 px-2 text-sm font-extrabold tracking-wide text-accent uppercase"
             onClick={() => {
               t.action?.run();
               dismissToast();
@@ -345,7 +343,7 @@ export function Notice({
 }) {
   return (
     <div className="flex flex-col items-center gap-5 pt-16 text-center">
-      <span className="flex h-16 w-16 items-center justify-center border border-line-strong text-fg-2">
+      <span className="avatar h-16 w-16 bg-raised text-fg-2">
         <Icon name={icon} size={32} />
       </span>
       <p className="max-w-72 text-lg font-bold">{text}</p>

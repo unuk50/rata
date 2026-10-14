@@ -11,6 +11,8 @@ interface Net {
   /** Why v is null. */
   why?: "new" | "rates";
   c: string;
+  /** Time of the newest change, to sort groups by activity. */
+  last?: number;
 }
 
 /** My net in each group, in the group currency. Null when it needs rates that are not here. */
@@ -24,24 +26,10 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
         // One unreadable group must not hide the others.
         const cache = await storage.cache(g.gid).catch(() => null);
         if (!cache) return [g.gid, { v: null, c: "USD" }] as const;
-        const state = foldEvents(Object.values(cache.events));
-        const cur = state.group?.currency ?? "USD";
-        const bal = balances(state);
-        const kind = state.group?.kind;
-        const curs = Object.keys(bal).filter((c) => Object.values(bal[c] ?? {}).some((v) => v));
-        if (!g.me || state.expenses.length + state.payments.length === 0)
-          return [g.gid, { kind, v: null, c: cur, why: "new" as const }] as const;
-        if (curs.length === 0) return [g.gid, { kind, v: 0, c: cur }] as const;
-        if (curs.length === 1 && curs[0] === cur) {
-          return [g.gid, { kind, v: bal[cur]?.[g.me] ?? 0, c: cur }] as const;
-        }
-        const conv = rates ? convertBalances(bal, cur, rates) : null;
-        return [
-          g.gid,
-          conv
-            ? { kind, v: conv[g.me] ?? 0, c: cur }
-            : { kind, v: null, c: cur, why: "rates" as const },
-        ] as const;
+        const events = Object.values(cache.events);
+        const last = Math.max(g.addedAt, ...events.map((e) => e.ts));
+        const net = netOf(g, foldEvents(events));
+        return [g.gid, { ...net, last }] as const;
       }),
     ).then((rows) => {
       if (live) setNets(Object.fromEntries(rows));
@@ -49,6 +37,21 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
     return () => {
       live = false;
     };
+
+    function netOf(g: SavedGroup, state: ReturnType<typeof foldEvents>): Net {
+      const cur = state.group?.currency ?? "USD";
+      const bal = balances(state);
+      const kind = state.group?.kind;
+      const curs = Object.keys(bal).filter((c) => Object.values(bal[c] ?? {}).some((v) => v));
+      if (!g.me || state.expenses.length + state.payments.length === 0)
+        return { kind, v: null, c: cur, why: "new" };
+      if (curs.length === 0) return { kind, v: 0, c: cur };
+      if (curs.length === 1 && curs[0] === cur) {
+        return { kind, v: bal[cur]?.[g.me] ?? 0, c: cur };
+      }
+      const conv = rates ? convertBalances(bal, cur, rates) : null;
+      return conv ? { kind, v: conv[g.me] ?? 0, c: cur } : { kind, v: null, c: cur, why: "rates" };
+    }
   }, [groups, rates]);
   return nets;
 }
@@ -104,7 +107,7 @@ export function Home() {
         <ul className="card divider">
           {groups
             .slice()
-            .sort((a, b) => b.addedAt - a.addedAt)
+            .sort((a, b) => (nets[b.gid]?.last ?? b.addedAt) - (nets[a.gid]?.last ?? a.addedAt))
             .map((g) => (
               <li key={g.gid}>
                 <button
@@ -113,10 +116,10 @@ export function Home() {
                   onClick={() => go(`/g/${g.gid}`)}
                 >
                   {/* The group's letter tells groups of one kind apart; the kind is a badge. */}
-                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center border border-line-strong text-lg font-extrabold">
+                  <span className="tile h-11 w-11 text-lg">
                     {g.name.trim().charAt(0).toUpperCase() || "?"}
                     <span
-                      className="absolute -right-1.5 -bottom-1.5 bg-ink text-sm leading-none"
+                      className="absolute right-0.5 bottom-0.5 text-[11px] leading-none"
                       aria-hidden="true"
                     >
                       {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}

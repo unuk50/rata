@@ -82,7 +82,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
         : allNeg
           ? "You owe"
           : perCurrency
-            ? "Your balance · no rates to combine"
+            ? "Per currency"
             : "Your balance";
   const settled = !empty && myNets.length === 0 && plan.length === 0;
   const edge =
@@ -166,7 +166,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                     {!empty && <Icon name="check" size={28} />} {heroLabel}
                   </div>
                   {!empty && plan.length > 0 && (
-                    <div className="caps mt-2">{plan.length} open between others</div>
+                    <div className="caps mt-2">
+                      {plan.length} {plan.length === 1 ? "payment" : "payments"} left between others
+                    </div>
                   )}
                 </>
               ) : (
@@ -247,7 +249,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                 <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
                                 <div className="min-w-0 flex-1">
                                   <Pair from={name(row.p.from)} to={name(row.p.to)} />
-                                  <div className="caps">Paid</div>
+                                  <div className="text-xs text-muted">payment</div>
                                 </div>
                                 <span className="font-bold">
                                   <Money v={row.p.amount} c={row.p.currency} />
@@ -298,7 +300,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                     {perCurrency && <span className="text-faint"> · each currency on its own</span>}
                   </h3>
                   {plan.length === 0 ? (
-                    <p className="card p-5 text-center font-bold text-muted">All settled</p>
+                    <p className="card p-5 text-center font-bold text-muted">
+                      {empty ? "Nothing spent yet" : "All settled"}
+                    </p>
                   ) : (
                     <ul className="card divider">
                       {[...plan]
@@ -391,12 +395,13 @@ function MyShare({
   const net = (e.paidBy[me] ?? 0) - owed;
   // In the split or a payer. A rounded share of 0 still counts as in it.
   const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
-  if (!inIt) return <span className="caps text-faint">Not in it</span>;
-  if (net === 0) return <span className="caps">Even</span>;
+  // One style for every state: a short lowercase word, then the amount when there is one.
+  if (!inIt) return <span className="text-xs text-faint">not in it</span>;
+  if (net === 0) return <span className="text-xs text-muted">even</span>;
   // History, not a debt now: neutral colours, one short word for your side of this expense.
   return (
-    <span className={`num shrink-0 text-sm ${net > 0 ? "font-bold text-fg-2" : "text-faint"}`}>
-      <span className="text-xs">{net > 0 ? "lent " : "owe "}</span>
+    <span className="num shrink-0 text-sm font-bold text-fg-2">
+      <span className="text-xs font-normal text-muted">{net > 0 ? "lent " : "owe "}</span>
       {formatMoney(Math.abs(net), e.currency)}
     </span>
   );

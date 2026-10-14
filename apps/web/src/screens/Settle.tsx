@@ -73,11 +73,8 @@ export function Settle({
       },
     ]);
     go(`/g/${saved.gid}`);
-    toast(
-      existing
-        ? "Payment saved"
-        : `${from === saved.me ? "You" : who(from)} paid ${who(toId)} ${formatMoney(v, cur)}`,
-    );
+    const line = `${from === saved.me ? "You" : who(from)} paid ${who(toId)} ${formatMoney(v, cur)}`;
+    toast(existing ? `Saved: ${line}` : line);
   };
 
   const remove = async () => {
@@ -120,9 +117,9 @@ export function Settle({
         }
       />
       <div className="space-y-6">
-        <div className="card flex items-center gap-2 p-3">
+        <div className="flex flex-col items-center gap-1 pt-2 pb-4">
           <select
-            className="field w-24 shrink-0 font-extrabold"
+            className="select-plain text-sm tracking-wide"
             value={cur}
             onChange={(e) => {
               setAmount(reAmount(amount, cur, e.target.value));
@@ -135,7 +132,7 @@ export function Settle({
             ))}
           </select>
           <input
-            className="amount"
+            className="amount text-center"
             inputMode="decimal"
             placeholder={zero(cur)}
             value={amount}

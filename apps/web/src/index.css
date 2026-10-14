@@ -12,7 +12,8 @@
   /* Surfaces, darkest to lightest */
   --color-ink: #0d0d0d; /* page */
   --color-panel: #121212; /* card */
-  --color-raised: #161616; /* field, tab track */
+  --color-raised: #1a1a1a; /* field, tab track */
+  --color-raised-2: #232323; /* field in focus, pressed row */
   --color-line: rgb(255 255 255 / 0.1);
   --color-line-strong: #3d3d3d;
 
@@ -33,6 +34,10 @@
   --color-owes-edge: #b32e1f;
   --color-warn: #f08d32;
   --color-info: #144cc7;
+
+  /* Shape: soft surfaces, 8 px grid. Only these two radii. */
+  --radius-surface: 16px; /* cards, sheets, tiles */
+  --radius-control: 12px; /* fields, buttons, tabs, chips */
 }
 
 @layer base {
@@ -60,7 +65,8 @@
 
 /* Containers */
 @utility card {
-  @apply border border-line bg-panel;
+  @apply overflow-hidden bg-panel;
+  border-radius: var(--radius-surface);
 }
 @utility divider {
   @apply divide-y divide-line;
@@ -83,6 +89,7 @@
  */
 @utility pop {
   --pop-depth: 4px;
+  border-radius: var(--radius-control);
   box-shadow:
     1px 1px 0 var(--edge, var(--color-line-strong)),
     2px 2px 0 var(--edge, var(--color-line-strong)),
@@ -111,8 +118,8 @@
   --edge: var(--color-accent-edge);
 }
 @utility btn-secondary {
-  @apply btn pop border border-fg-2 bg-ink text-fg;
-  --edge: var(--color-fg-2);
+  @apply btn pop bg-raised-2 text-fg;
+  --edge: var(--color-line-strong);
 }
 @utility btn-danger {
   @apply btn pop bg-owes text-white;
@@ -120,6 +127,7 @@
 }
 @utility btn-ghost {
   @apply btn px-3 text-fg-2 hover:text-fg active:opacity-70;
+  border-radius: var(--radius-control);
 }
 @utility btn-sm {
   @apply min-h-9 px-3 text-xs;
@@ -129,8 +137,17 @@
 }
 
 /* Inputs */
+/* Fields have no border: a filled shape that gets lighter in focus. */
 @utility field {
-  @apply w-full rounded-none border border-line-strong bg-raised px-3 py-2.5 text-fg outline-none placeholder:text-faint focus:border-fg;
+  @apply w-full border-0 bg-raised px-4 py-3 text-fg outline-none placeholder:text-faint focus:bg-raised-2;
+  border-radius: var(--radius-control);
+}
+/* A select that reads as text with a chevron, for the currency next to an amount. */
+@utility select-plain {
+  @apply cursor-pointer appearance-none border-0 bg-transparent pr-6 font-extrabold text-fg-2 outline-none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='white' stroke-opacity='.6' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
 }
 @utility label {
   @apply caps mb-1.5 block;
@@ -138,27 +155,59 @@
 
 /* Tabs and choices */
 @utility tabs {
-  @apply grid border border-line-strong bg-raised p-1 text-xs font-extrabold tracking-wide uppercase;
+  @apply grid bg-raised p-1 text-xs font-extrabold tracking-wide uppercase;
+  border-radius: var(--radius-control);
 }
 @utility tab {
-  @apply min-h-9 py-2 text-muted;
+  @apply min-h-9 py-2 text-muted transition-colors;
+  border-radius: calc(var(--radius-control) - 4px);
 }
 @utility tab-on {
   @apply bg-fg text-ink!;
 }
 @utility choice {
-  @apply border border-line-strong bg-panel p-3 text-left transition-colors;
+  @apply bg-raised p-3 text-left transition-colors;
+  border-radius: var(--radius-control);
 }
 @utility choice-on {
-  @apply border-accent bg-accent/10;
+  @apply bg-accent/10;
+  box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 @utility person {
-  @apply flex flex-col items-center gap-1.5 border border-transparent p-1.5 text-muted;
+  @apply flex flex-col items-center gap-1.5 p-1.5 text-muted;
+  border-radius: var(--radius-control);
   transition: transform 0.12s ease-in-out;
 }
 @utility person-on {
-  @apply border-accent text-fg opacity-100;
-  box-shadow: 3px 3px 0 var(--color-accent-edge);
+  @apply text-fg opacity-100;
+  & > span:first-child {
+    box-shadow:
+      0 0 0 2px var(--color-ink),
+      0 0 0 4px var(--color-accent);
+  }
+}
+/* Round avatar shape. */
+@utility avatar {
+  @apply inline-flex shrink-0 items-center justify-center font-extrabold;
+  border-radius: 9999px;
+}
+/* A removable name chip. */
+@utility chip {
+  @apply flex items-center gap-2 bg-raised py-1 pr-1 pl-1;
+  border-radius: 9999px;
+}
+/* A floating message bar. */
+@utility toast {
+  @apply flex items-center gap-3 bg-raised-2 px-4 py-2 text-fg;
+  border-radius: var(--radius-control);
+  box-shadow:
+    0 0 0 1px var(--color-line-strong),
+    0 12px 32px rgb(0 0 0 / 0.8);
+}
+/* Small square-ish tile for a group on Home. */
+@utility tile {
+  @apply relative flex shrink-0 items-center justify-center bg-raised font-extrabold;
+  border-radius: var(--radius-control);
 }
 @utility amount {
   @apply w-full min-w-0 bg-transparent text-right text-5xl font-extrabold tracking-tight text-fg outline-none placeholder:text-faint;

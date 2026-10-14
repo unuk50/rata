@@ -121,10 +121,7 @@ export function NewGroup() {
           {people.length > 0 && (
             <ul className="mb-2 flex flex-wrap gap-2">
               {people.map((p, i) => (
-                <li
-                  key={p.id}
-                  className="flex items-center gap-2 border border-line-strong bg-raised py-1 pr-1 pl-1"
-                >
+                <li key={p.id} className="chip">
                   <Avatar name={p.name} i={i + 1} />
                   <span className="text-sm font-bold">{p.name}</span>
                   <button
