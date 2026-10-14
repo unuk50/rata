@@ -230,7 +230,7 @@ function goa() {
     split: {
       exact: { Aarav: 6457, Priya: 6457, Kabir: 6457, Neha: 6457, Vikram: 7912, Ananya: 7912 },
     },
-    cat: "Transport",
+    cat: "Travel",
     note: "Vikram and Ananya booked a week later",
   });
   e({
@@ -441,7 +441,7 @@ function bangkok() {
     cur: "INR",
     paid: "Meera",
     split: { equal: "all" },
-    cat: "Transport",
+    cat: "Travel",
   });
   e({
     date: "2026-10-02",
