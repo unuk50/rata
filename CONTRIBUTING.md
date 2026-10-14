@@ -2,10 +2,13 @@
 
 Thank you for your help.
 
-1. Open an issue first for a large change, so we can agree on the approach.
-2. Fork the repo and make a branch.
+1. **Each change needs a reason that people can see.** Find an open issue, or a section in [docs/product/](docs/product/) that the change does. If neither exists, open an issue first.
+2. Fork the repo and make a branch. Nobody pushes to `main`. Each merge to `main` deploys to production.
 3. Run `pnpm lint`, `pnpm typecheck` and `pnpm test` before you push.
-4. Open a pull request. CodeRabbit reviews each pull request. A maintainer merges it.
+4. Open a pull request. Its "Why" section must have `Closes #N`, `Refs #N` or `Direction: docs/product/<file>#<section>`. The `PR link` check fails without one.
+5. CodeRabbit reviews each pull request. A maintainer merges it.
+
+Coding agents: read [AGENTS.md](AGENTS.md) and the skills in `.claude/skills/`.
 
 ## Sign your commits (DCO)
 

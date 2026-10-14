@@ -10,13 +10,18 @@ We are fed up with basic tools that charge money for barebones, average features
 
 - Groups for a trip, a home, a party or anything else
 - Invite link: people join with one tap, no account and no password
-- Expenses in any currency, with split equally, by amounts, by percent or by shares
+- India first: INR by default, and pay with Google Pay or another UPI app (planned, [#11](https://github.com/unuk50/rata/issues/11))
+- Expenses in INR or any other currency for trips, with split equally, by amounts, by percent or by shares
 - More than one payer for one expense
 - Balances, the fewest payments to settle, and payment records
 - Conversion at daily ECB reference rates when a group uses more than one currency
 - Live sync between devices, and full use offline
 - CSV export
 - Installs as an app from the browser (PWA)
+
+## Where Rata is going
+
+Read the [product direction](docs/product/README.md) and the [roadmap](docs/product/ROADMAP.md). Next: Google sign-in, a consistent design, event types (home, vacation, poker, party, gift pool), then a private "My money" layer that stays on your device.
 
 ## Privacy
 
@@ -30,7 +35,7 @@ Lose every invite link and every device, and the group is gone. That is the cost
 apps/web        React PWA. Writes to IndexedDB first, then syncs in the background.
 apps/sync       Cloudflare Worker + one SQLite Durable Object per group. Serves the web app too.
 packages/core   Money type, event schema, splits, balances, settle-up plan, encryption.
-docs/           Product requirements and architecture notes.
+docs/           Product direction (docs/product), architecture notes.
 ```
 
 Money is an integer count of minor units plus an ISO 4217 code. Balances come from the event log, never from stored totals. Property tests prove that each split adds up to the total and that every group adds up to zero in each currency.
