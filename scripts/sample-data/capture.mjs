@@ -178,7 +178,11 @@ async function openSettle() {
     .getByRole("button", { name: /save payment/i })
     .waitFor({ timeout: 2500 })
     .then(() => true)
-    .catch(() => false);
+    .catch(async (err) => {
+      const balances = page.getByRole("tab", { name: "Balances", selected: true });
+      if (await balances.count()) return false;
+      throw err;
+    });
 }
 
 /** Date, category and note may sit behind a "More" disclosure. */
