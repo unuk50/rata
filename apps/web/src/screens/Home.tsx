@@ -8,6 +8,8 @@ interface Net {
   kind?: string;
   /** Null: nothing to show yet, or it needs rates that are not here. */
   v: number | null;
+  /** Why v is null. */
+  why?: "new" | "rates";
   c: string;
 }
 
@@ -23,15 +25,19 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
         const bal = balances(state);
         const kind = state.group?.kind;
         const curs = Object.keys(bal).filter((c) => Object.values(bal[c] ?? {}).some((v) => v));
-        const none = { kind, v: null, c: cur };
         if (!g.me || state.expenses.length + state.payments.length === 0)
-          return [g.gid, none] as const;
+          return [g.gid, { kind, v: null, c: cur, why: "new" as const }] as const;
         if (curs.length === 0) return [g.gid, { kind, v: 0, c: cur }] as const;
         if (curs.length === 1 && curs[0] === cur) {
           return [g.gid, { kind, v: bal[cur]?.[g.me] ?? 0, c: cur }] as const;
         }
         const conv = rates ? convertBalances(bal, cur, rates) : null;
-        return [g.gid, conv ? { kind, v: conv[g.me] ?? 0, c: cur } : none] as const;
+        return [
+          g.gid,
+          conv
+            ? { kind, v: conv[g.me] ?? 0, c: cur }
+            : { kind, v: null, c: cur, why: "rates" as const },
+        ] as const;
       }),
     ).then((rows) => setNets(Object.fromEntries(rows)));
   }, [groups, rates]);
@@ -97,8 +103,15 @@ export function Home() {
                   className="row min-h-16 hover:bg-raised"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-line-strong text-lg">
-                    {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
+                  {/* The group's letter tells groups of one kind apart; the kind is a badge. */}
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center border border-line-strong text-lg font-extrabold">
+                    {g.name.trim().charAt(0).toUpperCase() || "?"}
+                    <span
+                      className="absolute -right-2 -bottom-2 text-sm leading-none"
+                      aria-hidden="true"
+                    >
+                      {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
+                    </span>
                   </span>
                   <span className="min-w-0 flex-1 truncate text-lg font-bold">{g.name}</span>
                   <GroupNet n={nets[g.gid]} />
@@ -155,13 +168,15 @@ export function Home() {
 }
 
 function GroupNet({ n }: { n: Net | undefined }) {
-  if (!n || n.v === null) {
+  if (n?.why === "new") return <span className="caps text-faint">New</span>;
+  if (n?.why === "rates")
     return (
-      <span className="text-muted">
-        <Icon name="arrow" />
+      <span className="text-faint" title="Needs exchange rates">
+        <Icon name="wifiOff" size={18} />
+        <span className="sr-only">Needs exchange rates</span>
       </span>
     );
-  }
+  if (!n || n.v === null) return null;
   if (n.v === 0) return <span className="caps text-owed">Square</span>;
   return (
     <span className="text-right">

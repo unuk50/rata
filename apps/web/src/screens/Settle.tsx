@@ -1,4 +1,4 @@
-import { type GroupSecret, newId, parseAmount } from "@rata/core";
+import { formatMoney, type GroupSecret, newId, parseAmount } from "@rata/core";
 import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
@@ -49,6 +49,9 @@ export function Settle({
   const cur = currency || state.group?.currency || "USD";
   const toId = to && to !== from ? to : members.find((m) => m.mid !== from)?.mid || "";
 
+  const who = (mid: string) =>
+    mid === saved.me ? "you" : (members.find((m) => m.mid === mid)?.name ?? "?");
+
   const save = async () => {
     const v = parseAmount(amount, cur);
     if (!v || v <= 0) return setError("Enter an amount.");
@@ -69,6 +72,7 @@ export function Settle({
       },
     ]);
     go(`/g/${saved.gid}`);
+    toast(existing ? "Payment saved" : `Paid ${who(toId)} ${formatMoney(v, cur)}`);
   };
 
   const remove = async () => {
@@ -77,7 +81,7 @@ export function Settle({
       { t: "payment.del", id: newId(), ts: Date.now(), by: saved.me, pid: existing.pid },
     ]);
     go(`/g/${saved.gid}`);
-    toast("Payment deleted", {
+    toast(`Deleted payment to ${who(existing.to)}`, {
       label: "Undo",
       run: () => void sync.add([{ ...existing, id: newId(), ts: Date.now(), by: saved.me }]),
     });

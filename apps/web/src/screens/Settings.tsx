@@ -2,6 +2,7 @@ import { formatMoney, type GroupSecret, newId, owedShares, toMajor } from "@rata
 import { useEffect, useRef, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
+import { toast } from "../lib/toast";
 import { Avatar, Header, Icon } from "../lib/ui";
 
 export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
@@ -29,11 +30,12 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
         name: newName.trim(),
       },
     ]);
+    toast(`Added ${newName.trim()}`);
     setNewName("");
   };
 
   const rename = async () => {
-    if (!g || !gname.trim()) return;
+    if (!g || !gname.trim() || gname.trim() === g.name) return;
     await sync?.add([
       {
         t: "group",
@@ -46,6 +48,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
       },
     ]);
     await storage.upsertGroup({ ...saved, name: gname.trim() });
+    toast("Name saved");
   };
 
   const exportCsv = () => {
@@ -99,6 +102,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
     await pendingRename.current;
     await storage.removeGroup(saved.gid);
     go("/");
+    toast(`Removed ${g?.name ?? saved.name} from this device`);
   };
 
   const total: Record<string, number> = {};

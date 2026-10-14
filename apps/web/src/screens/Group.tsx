@@ -92,7 +92,22 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
 
   const settleLink = (t: Transfer) =>
     `/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`;
-  const myDebt = plan.find((t) => t.from === me);
+  // Group currency first, the same order as the hero.
+  const byCur = (a: Transfer, b: Transfer) =>
+    Number(b.currency === cur) - Number(a.currency === cur);
+  const myDebts = plan.filter((t) => t.from === me).sort(byCur);
+  const myCredits = plan.filter((t) => t.to === me).sort(byCur);
+  const myDebt = myDebts[0];
+  const names = (ids: string[]) =>
+    ids.length > 2 ? `${ids.slice(0, 2).join(", ")} +${ids.length - 2}` : ids.join(" and ");
+  const counterparts =
+    allNeg && myDebts.length
+      ? `to ${names(myDebts.map((t) => realName(t.to)))}`
+      : allPos && myCredits.length
+        ? `from ${names(myCredits.map((t) => realName(t.from)))}`
+        : "";
+  const ratesDay =
+    rates?.date && rates.date !== new Date().toISOString().slice(0, 10) ? dayLabel(rates.date) : "";
   const isMine = (t: Transfer) => t.from === me || t.to === me;
 
   const rows = [
@@ -158,7 +173,12 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                 <>
                   <div className="caps mb-1">
                     {heroLabel}
-                    {approx && <span className="text-faint"> · ≈ today's rates</span>}
+                    {approx && (
+                      <span className="text-faint">
+                        {" "}
+                        · ≈ {ratesDay ? `${ratesDay} rates` : "today's rates"}
+                      </span>
+                    )}
                   </div>
                   {myNets.map(([c, v], i) => (
                     <div
@@ -168,6 +188,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                       <Money v={v} c={c} signed={!allPos && !allNeg} tone={allPos || allNeg} />
                     </div>
                   ))}
+                  {counterparts && <div className="caps mt-2">{counterparts}</div>}
                 </>
               )}
             </button>
@@ -317,7 +338,8 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             <div className="mx-auto grid max-w-xl grid-cols-[1fr_2fr] gap-3">
               <button
                 type="button"
-                className="btn-secondary"
+                className="btn-secondary min-w-0"
+                disabled={plan.length === 0}
                 onClick={() => {
                   if (myDebt) return go(settleLink(myDebt));
                   setTab("balances");
@@ -332,7 +354,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                   );
                 }}
               >
-                {myDebt ? `Pay ${realName(myDebt.to)}` : "Settle up"}
+                <span className="truncate">
+                  {myDebt ? `Pay ${realName(myDebt.to)}` : "Settle up"}
+                </span>
               </button>
               <button
                 type="button"
@@ -370,9 +394,11 @@ function MyShare({
   if (net === 0) return <span className="caps">Even</span>;
   // History, not a debt now: a neutral colour, with + or − for your side of this expense.
   return (
-    <span className="num text-sm font-bold text-fg-2">
-      {net > 0 ? "+" : "\u2212"}
-      {formatMoney(Math.abs(net), e.currency)}
+    <span className="text-right">
+      <span className="caps block text-faint">{net > 0 ? "You lent" : "You borrowed"}</span>
+      <span className="num text-sm font-bold text-fg-2">
+        {formatMoney(Math.abs(net), e.currency)}
+      </span>
     </span>
   );
 }

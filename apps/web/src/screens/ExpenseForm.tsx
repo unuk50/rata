@@ -210,6 +210,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     if (v) return setError(v);
     await sync?.add([e]);
     go(`/g/${saved.gid}`);
+    toast(existing ? "Saved" : `Added “${e.desc}”`);
   };
 
   const remove = async () => {
@@ -335,7 +336,9 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               {members.map((m, i) => (
                 <div key={m.mid} className="flex items-center gap-3 p-2">
                   <Avatar name={m.name} i={i} />
-                  <span className="min-w-0 flex-1 truncate text-sm font-bold">{m.name}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                    {m.mid === saved.me ? "You" : m.name}
+                  </span>
                   <input
                     className="field num w-32 text-right"
                     inputMode="decimal"

@@ -1,5 +1,5 @@
 import { currencyExponent, formatMoney, parseAmount } from "@rata/core";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { go } from "./hooks";
 import type { SyncStatus } from "./sync";
 import { dismissToast, useToast } from "./toast";
@@ -207,7 +207,8 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
 }
 
 // No greens or reds: those mean money owed and money due.
-const HUES = [24, 200, 280, 52, 232, 310, 186, 258, 40, 214];
+// Ten hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
+const HUES = [24, 225, 300, 185, 265, 38, 330, 205, 280, 172];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
@@ -251,25 +252,31 @@ export function PeoplePicker({
   disabled?: (mid: string) => boolean;
 }) {
   const ref = useRef<HTMLFieldSetElement>(null);
+  const [edges, setEdges] = useState({ l: false, r: false });
+  const measure = () => {
+    const b = ref.current;
+    if (b) setEdges({ l: b.scrollLeft > 4, r: b.scrollLeft + b.clientWidth < b.scrollWidth - 4 });
+  };
   // Bring the first selected person into view, so a choice is never hidden off the edge.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, when the row opens
   useEffect(() => {
     // Scroll only this row, never the page.
     const box = ref.current;
     const on = box?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    measure();
     if (!box || !on) return;
     const b = box.getBoundingClientRect();
     const r = on.getBoundingClientRect();
-    if (r.right > b.right) box.scrollLeft += r.left - b.left - 16;
+    if (r.right > b.right) box.scrollLeft += r.left - b.left - 72;
+    measure();
   }, []);
+  const mask = `linear-gradient(to right, ${edges.l ? "transparent, #000 2.5rem" : "#000"}, ${edges.r ? "#000 calc(100% - 2.5rem), transparent" : "#000"})`;
   return (
     <fieldset
       ref={ref}
       className="-mx-4 min-w-0 overflow-x-auto px-4 pb-1 [scrollbar-width:none]"
-      style={
-        people.length > 4
-          ? { maskImage: "linear-gradient(to right, #000 85%, transparent)" }
-          : undefined
-      }
+      onScroll={measure}
+      style={edges.l || edges.r ? { maskImage: mask } : undefined}
     >
       <legend className="sr-only">{label}</legend>
       <div className="flex w-max gap-2 pr-8">
@@ -283,7 +290,7 @@ export function PeoplePicker({
               aria-pressed={on}
               disabled={off}
               onClick={() => onToggle(p.mid)}
-              className={`${on ? "person person-on" : "person"} ${off ? "opacity-30" : ""}`}
+              className={`${on ? "person person-on" : "person"} ${off ? "cursor-not-allowed opacity-25 grayscale" : ""}`}
             >
               <Avatar name={p.name} i={indexOf ? indexOf(p.mid) : i} big />
               <span className="w-16 truncate text-center text-xs font-bold">
@@ -303,12 +310,12 @@ export function ToastBar() {
   if (!t) return null;
   return (
     <output className="fixed inset-x-0 bottom-24 z-20 block px-4">
-      <div className="card mx-auto flex max-w-xl items-center gap-3 bg-raised px-4 py-2">
-        <span className="flex-1 text-sm font-bold">{t.text}</span>
+      <div className="mx-auto flex max-w-xl items-center gap-3 bg-fg px-4 py-2 text-ink shadow-[0_8px_24px_rgb(0_0_0/0.6)]">
+        <span className="min-w-0 flex-1 truncate text-sm font-bold">{t.text}</span>
         {t.action && (
           <button
             type="button"
-            className="btn-ghost btn-sm text-accent"
+            className="min-h-11 px-2 text-sm font-extrabold tracking-wide uppercase underline underline-offset-4"
             onClick={() => {
               t.action?.run();
               dismissToast();

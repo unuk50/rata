@@ -78,10 +78,7 @@ export function Join({ code }: { code: string }) {
       {problem === "invalid" ? (
         <Notice icon="link" text="This link does not work. Ask for a new one." />
       ) : problem === "empty" ? (
-        <Notice
-          icon="link"
-          text="Nothing here yet. Check the link, or ask its sender to open Rata once."
-        />
+        <Notice icon="link" text="Nothing here yet. Ask the sender to open Rata once." />
       ) : problem === "offline" ? (
         <Notice icon="wifiOff" text="You are offline. Open the link again when you are online." />
       ) : !state.group ? (
