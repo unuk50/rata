@@ -339,7 +339,8 @@ function MyShare({
     owed = 0;
   }
   const net = (e.paidBy[me] ?? 0) - owed;
-  const inIt = owed > 0 || (e.paidBy[me] ?? 0) > 0;
+  // In the split or a payer. A rounded share of 0 still counts as in it.
+  const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
   if (!inIt) return <span className="caps text-faint">Not in it</span>;
   if (net === 0) return <span className="caps">Even</span>;
   return (

@@ -9,8 +9,11 @@ import {
 } from "@rata/core";
 import { type GroupCache, type Pending, storage } from "./storage";
 
-/** "invalid": the server has no group for this link, or the key is wrong. */
-export type SyncStatus = "loading" | "syncing" | "live" | "offline" | "invalid";
+/**
+ * "invalid": the server rejected the key. "empty": the server has nothing for this link yet,
+ * which can be a wrong link or a group whose maker has not synced yet, so it keeps retrying.
+ */
+export type SyncStatus = "loading" | "syncing" | "live" | "offline" | "invalid" | "empty";
 
 interface Snapshot {
   state: GroupState;
@@ -182,12 +185,15 @@ export class GroupSync {
       await this.flush();
       await this.pull();
       if (this.queue.length === 0 && Object.keys(this.cache.events).length === 0) {
-        throw new InvalidLink();
+        this.scheduleReconnect();
+        return this.setStatus("empty");
       }
+      const token = await this.token;
       if (this.closed) return;
+      if (!navigator.onLine) return this.setStatus("offline");
       const proto = location.protocol === "https:" ? "wss" : "ws";
       const ws = new WebSocket(
-        `${proto}://${location.host}${this.base()}/ws?token=${encodeURIComponent(await this.token)}`,
+        `${proto}://${location.host}${this.base()}/ws?token=${encodeURIComponent(token)}`,
       );
       this.ws = ws;
       ws.onopen = () => {

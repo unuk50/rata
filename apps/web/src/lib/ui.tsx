@@ -1,4 +1,4 @@
-import { currencyExponent, formatMoney } from "@rata/core";
+import { currencyExponent, formatMoney, parseAmount } from "@rata/core";
 import type { ReactNode } from "react";
 import { go } from "./hooks";
 import type { SyncStatus } from "./sync";
@@ -66,6 +66,14 @@ export function amountInput(minor: number, cur: string): string {
     minimumFractionDigits: exp,
     maximumFractionDigits: exp,
   }).format(minor / 10 ** exp);
+}
+
+/** Keep a typed amount when the currency changes: 10.5 USD becomes 11 JPY, not an error. */
+export function reAmount(text: string, from: string, to: string): string {
+  const v = parseAmount(text, from);
+  if (v === null) return text;
+  const major = v / 10 ** currencyExponent(from);
+  return amountInput(Math.round(major * 10 ** currencyExponent(to)), to);
 }
 
 /** Placeholder for an amount field: 0.00, or 0 for currencies without minor units. */
@@ -177,6 +185,7 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
     live: ["bg-owed", "Synced"],
     offline: ["bg-faint", "Offline"],
     invalid: ["bg-owes", "Link not valid"],
+    empty: ["bg-warn", "Waiting"],
   };
   const [color, label] = status === "live" && pending > 0 ? ["bg-warn", "Sending"] : map[status];
   // Synced is the normal state, so it shows nothing. Other states show a dot and a word.

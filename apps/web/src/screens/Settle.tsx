@@ -9,6 +9,7 @@ import {
   Icon,
   Notice,
   PeoplePicker,
+  reAmount,
   today,
   zero,
 } from "../lib/ui";
@@ -108,7 +109,10 @@ export function Settle({
           <select
             className="field w-24 shrink-0 font-extrabold"
             value={cur}
-            onChange={(e) => setCurrency(e.target.value)}
+            onChange={(e) => {
+              setAmount(reAmount(amount, cur, e.target.value));
+              setCurrency(e.target.value);
+            }}
             aria-label="Currency"
           >
             {CURRENCIES.map((c) => (

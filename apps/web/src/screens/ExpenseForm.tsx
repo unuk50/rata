@@ -20,6 +20,7 @@ import {
   Header,
   Notice,
   PeoplePicker,
+  reAmount,
   TabPanel,
   Tabs,
   today,
@@ -165,7 +166,24 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   /** Start each method with an even split, so the form does not open on an error. */
   const pickMethod = (m: SplitMethod) => {
     setMethod(m);
-    if (m === "equal" || (existing && existing.split.method === m)) return;
+    if (m === "equal") return;
+    if (existing && existing.split.method === m) {
+      // Back to the saved method: bring back the saved values.
+      const ps = existing.split.parts;
+      setParts(
+        Object.fromEntries(
+          Object.entries(ps).map(([k, v]) => [
+            k,
+            m === "exact"
+              ? amountInput(v, existing.currency)
+              : m === "percent"
+                ? String(v / 100)
+                : String(v),
+          ]),
+        ),
+      );
+      return;
+    }
     const ids = members.filter((x) => inSplit[x.mid]).map((x) => x.mid);
     const who = ids.length ? ids : members.map((x) => x.mid);
     const even = (n: number) =>
@@ -254,7 +272,10 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             id="cur"
             className="field w-24 shrink-0 font-extrabold"
             value={cur}
-            onChange={(e) => setCurrency(e.target.value)}
+            onChange={(e) => {
+              setAmount(reAmount(amount, cur, e.target.value));
+              setCurrency(e.target.value);
+            }}
             aria-label="Currency"
           >
             {CURRENCIES.map((c) => (

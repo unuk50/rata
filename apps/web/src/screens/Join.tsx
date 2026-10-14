@@ -66,13 +66,22 @@ export function Join({ code }: { code: string }) {
   };
 
   const problem =
-    status === "invalid" ? "invalid" : status === "offline" && !state.group ? "offline" : null;
+    status === "invalid"
+      ? "invalid"
+      : !state.group && (status === "offline" || status === "empty")
+        ? status
+        : null;
 
   return (
     <div>
       <Header title={state.group ? `Join ${state.group.name}` : "Join group"} back="/" />
       {problem === "invalid" ? (
         <Notice icon="link" text="This link does not work. Ask for a new one." />
+      ) : problem === "empty" ? (
+        <Notice
+          icon="link"
+          text="Nothing here yet. Check the link, or ask its sender to open Rata once."
+        />
       ) : problem === "offline" ? (
         <Notice icon="wifiOff" text="You are offline. Open the link again when you are online." />
       ) : !state.group ? (
