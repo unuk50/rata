@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
+import { toast } from "../lib/toast";
 import {
   Avatar,
   amountInput,
@@ -212,15 +213,15 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   };
 
   const remove = async () => {
-    if (
-      !existing ||
-      !confirm("Delete this expense? Everyone in the group will see that you deleted it.")
-    )
-      return;
-    await sync?.add([
+    if (!existing || !sync) return;
+    await sync.add([
       { t: "expense.del", id: newId(), ts: Date.now(), by: saved.me, eid: existing.eid },
     ]);
     go(`/g/${saved.gid}`);
+    toast(`Deleted “${existing.desc}”`, {
+      label: "Undo",
+      run: () => void sync.add([{ ...existing, id: newId(), ts: Date.now(), by: saved.me }]),
+    });
   };
 
   if (!group) return <Header title="Expense" back={`/g/${saved.gid}`} />;
@@ -371,7 +372,9 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                   {members.map((m, i) => (
                     <div key={m.mid} className="flex items-center gap-3 p-2">
                       <Avatar name={m.name} i={i} />
-                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{m.name}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                        {m.mid === saved.me ? "You" : m.name}
+                      </span>
                       <input
                         className="field num w-24 text-right"
                         inputMode="decimal"

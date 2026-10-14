@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "./lib/hooks";
 import { type SavedGroup, storage } from "./lib/storage";
-import { Notice } from "./lib/ui";
+import { Notice, ToastBar } from "./lib/ui";
 import { ExpenseForm } from "./screens/ExpenseForm";
 import { Group } from "./screens/Group";
 import { Home } from "./screens/Home";
@@ -53,5 +53,10 @@ export function App() {
       </WithGroup>
     );
   } else view = <Home />;
-  return <main className="mx-auto max-w-xl px-4">{view}</main>;
+  return (
+    <main className="mx-auto max-w-xl px-4">
+      {view}
+      <ToastBar />
+    </main>
+  );
 }

@@ -1,6 +1,7 @@
 import {
   balances,
   convertBalances,
+  formatMoney,
   type GroupSecret,
   owedShares,
   type Rates,
@@ -64,7 +65,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
           string,
           number,
         ][]);
-  const myNets = netOf(me ?? "");
+  // Group currency first, so the big line does not jump between currencies.
+  const myNets = netOf(me ?? "").sort(([a], [b]) => Number(b === cur) - Number(a === cur));
+  const approx = multi && !!converted;
   const allPos = myNets.length > 0 && myNets.every(([, v]) => v > 0);
   const allNeg = myNets.length > 0 && myNets.every(([, v]) => v < 0);
   const empty = state.expenses.length === 0 && state.payments.length === 0;
@@ -79,11 +82,13 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
         : allNeg
           ? "You owe"
           : "Your balance";
-  const edge = allPos
-    ? "var(--color-owed)"
-    : allNeg
-      ? "var(--color-owes)"
-      : "var(--color-line-strong)";
+  const settled = !empty && myNets.length === 0 && plan.length === 0;
+  const edge =
+    allPos || settled
+      ? "var(--color-owed)"
+      : allNeg
+        ? "var(--color-owes)"
+        : "var(--color-line-strong)";
 
   const settleLink = (t: Transfer) =>
     `/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`;
@@ -138,7 +143,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             >
               {myNets.length === 0 ? (
                 <>
-                  <div className="flex items-center gap-3 text-2xl font-extrabold text-fg-2">
+                  <div
+                    className={`flex items-center gap-3 text-2xl font-extrabold ${settled ? "text-owed" : "text-fg"}`}
+                  >
                     {!empty && <Icon name="check" size={28} />} {heroLabel}
                   </div>
                   {!empty && plan.length > 0 && (
@@ -149,7 +156,10 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                 </>
               ) : (
                 <>
-                  <div className="caps mb-1">{heroLabel}</div>
+                  <div className="caps mb-1">
+                    {heroLabel}
+                    {approx && <span className="text-faint"> · ≈ today's rates</span>}
+                  </div>
                   {myNets.map(([c, v], i) => (
                     <div
                       key={c}
@@ -234,31 +244,34 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             {tab === "balances" && (
               <div className="space-y-6">
                 <ul className="card divider">
-                  {state.members.map((m, i) => {
-                    const nets = netOf(m.mid);
-                    return (
-                      <li key={m.mid} className="row">
-                        <Avatar name={m.name} i={i} />
-                        <span className="min-w-0 flex-1 truncate font-bold">
-                          {m.mid === me ? "You" : m.name}
-                        </span>
-                        <span className="text-right font-bold">
-                          {nets.length === 0 ? (
-                            <span className="text-muted">—</span>
-                          ) : (
-                            nets.map(([c, v]) => (
-                              <div key={c}>
-                                <Money v={v} c={c} signed />
-                              </div>
-                            ))
-                          )}
-                        </span>
-                      </li>
-                    );
-                  })}
+                  {[...state.members]
+                    .sort((a, b) => Number(b.mid === me) - Number(a.mid === me))
+                    .map((m) => {
+                      const i = idx(m.mid);
+                      const nets = netOf(m.mid);
+                      return (
+                        <li key={m.mid} className="row">
+                          <Avatar name={m.name} i={i} />
+                          <span className="min-w-0 flex-1 truncate font-bold">
+                            {m.mid === me ? "You" : m.name}
+                          </span>
+                          <span className="text-right font-bold">
+                            {nets.length === 0 ? (
+                              <span className="text-muted">—</span>
+                            ) : (
+                              nets.map(([c, v]) => (
+                                <div key={c}>
+                                  <Money v={v} c={c} signed />
+                                </div>
+                              ))
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
                 </ul>
 
-                <section>
+                <section id="settle-up">
                   <h3 className="caps mb-2">
                     Settle up
                     {perCurrency && <span className="text-faint"> · each currency on its own</span>}
@@ -305,9 +318,17 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => (myDebt ? go(settleLink(myDebt)) : setTab("balances"))}
+                onClick={() => {
+                  if (myDebt) return go(settleLink(myDebt));
+                  setTab("balances");
+                  setTimeout(
+                    () =>
+                      document.getElementById("settle-up")?.scrollIntoView({ behavior: "smooth" }),
+                    50,
+                  );
+                }}
               >
-                Settle up
+                {myDebt ? `Pay ${realName(myDebt.to)}` : "Settle up"}
               </button>
               <button
                 type="button"
@@ -343,12 +364,11 @@ function MyShare({
   const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
   if (!inIt) return <span className="caps text-faint">Not in it</span>;
   if (net === 0) return <span className="caps">Even</span>;
+  // History, not a debt now: a neutral colour, with + or − for your side of this expense.
   return (
-    <span className="text-right">
-      <span className="caps block">{net > 0 ? "You get" : "You owe"}</span>
-      <span className="text-sm font-extrabold">
-        <Money v={net} c={e.currency} tone />
-      </span>
+    <span className="num text-sm font-bold text-fg-2">
+      {net > 0 ? "+" : "\u2212"}
+      {formatMoney(Math.abs(net), e.currency)}
     </span>
   );
 }

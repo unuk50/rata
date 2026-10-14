@@ -1,7 +1,8 @@
 import { currencyExponent, formatMoney, parseAmount } from "@rata/core";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { go } from "./hooks";
 import type { SyncStatus } from "./sync";
+import { dismissToast, useToast } from "./toast";
 
 export const CURRENCIES: string[] = (() => {
   const common = [
@@ -205,7 +206,8 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-const HUES = [24, 200, 280, 140, 340, 52, 170, 232, 0, 100];
+// No greens or reds: those mean money owed and money due.
+const HUES = [24, 200, 280, 52, 232, 310, 186, 258, 40, 214];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
@@ -238,6 +240,7 @@ export function PeoplePicker({
   me,
   label,
   indexOf,
+  disabled,
 }: {
   people: Person[];
   indexOf?: (mid: string) => number;
@@ -245,20 +248,42 @@ export function PeoplePicker({
   onToggle: (mid: string) => void;
   me?: string;
   label: string;
+  disabled?: (mid: string) => boolean;
 }) {
+  const ref = useRef<HTMLFieldSetElement>(null);
+  // Bring the first selected person into view, so a choice is never hidden off the edge.
+  useEffect(() => {
+    // Scroll only this row, never the page.
+    const box = ref.current;
+    const on = box?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!box || !on) return;
+    const b = box.getBoundingClientRect();
+    const r = on.getBoundingClientRect();
+    if (r.right > b.right) box.scrollLeft += r.left - b.left - 16;
+  }, []);
   return (
-    <fieldset className="-mx-4 min-w-0 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+    <fieldset
+      ref={ref}
+      className="-mx-4 min-w-0 overflow-x-auto px-4 pb-1 [scrollbar-width:none]"
+      style={
+        people.length > 4
+          ? { maskImage: "linear-gradient(to right, #000 85%, transparent)" }
+          : undefined
+      }
+    >
       <legend className="sr-only">{label}</legend>
-      <div className="flex w-max gap-2">
+      <div className="flex w-max gap-2 pr-8">
         {people.map((p, i) => {
           const on = selected(p.mid);
+          const off = disabled?.(p.mid) ?? false;
           return (
             <button
               key={p.mid}
               type="button"
               aria-pressed={on}
+              disabled={off}
               onClick={() => onToggle(p.mid)}
-              className={on ? "person person-on" : "person"}
+              className={`${on ? "person person-on" : "person"} ${off ? "opacity-30" : ""}`}
             >
               <Avatar name={p.name} i={indexOf ? indexOf(p.mid) : i} big />
               <span className="w-16 truncate text-center text-xs font-bold">
@@ -269,6 +294,31 @@ export function PeoplePicker({
         })}
       </div>
     </fieldset>
+  );
+}
+
+/** The message bar from toast(). Sits above the bottom action bar. */
+export function ToastBar() {
+  const t = useToast();
+  if (!t) return null;
+  return (
+    <output className="fixed inset-x-0 bottom-24 z-20 block px-4">
+      <div className="card mx-auto flex max-w-xl items-center gap-3 bg-raised px-4 py-2">
+        <span className="flex-1 text-sm font-bold">{t.text}</span>
+        {t.action && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm text-accent"
+            onClick={() => {
+              t.action?.run();
+              dismissToast();
+            }}
+          >
+            {t.action.label}
+          </button>
+        )}
+      </div>
+    </output>
   );
 }
 

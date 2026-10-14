@@ -2,11 +2,18 @@ import { balances, convertBalances, decodeInvite, foldEvents, type Rates } from 
 import { useEffect, useState } from "react";
 import { go, useGroups, useRates } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
-import { Avatar, Icon, Money } from "../lib/ui";
+import { Icon, KINDS, Money } from "../lib/ui";
+
+interface Net {
+  kind?: string;
+  /** Null: nothing to show yet, or it needs rates that are not here. */
+  v: number | null;
+  c: string;
+}
 
 /** My net in each group, in the group currency. Null when it needs rates that are not here. */
 function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
-  const [nets, setNets] = useState<Record<string, { v: number; c: string } | null>>({});
+  const [nets, setNets] = useState<Record<string, Net>>({});
   useEffect(() => {
     if (!groups) return;
     void Promise.all(
@@ -14,15 +21,17 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
         const state = foldEvents(Object.values((await storage.cache(g.gid)).events));
         const cur = state.group?.currency ?? "USD";
         const bal = balances(state);
+        const kind = state.group?.kind;
         const curs = Object.keys(bal).filter((c) => Object.values(bal[c] ?? {}).some((v) => v));
-        if (!g.me) return [g.gid, null] as const;
-        if (curs.length === 0) return [g.gid, { v: 0, c: cur }] as const;
+        const none = { kind, v: null, c: cur };
+        if (!g.me || state.expenses.length + state.payments.length === 0)
+          return [g.gid, none] as const;
+        if (curs.length === 0) return [g.gid, { kind, v: 0, c: cur }] as const;
         if (curs.length === 1 && curs[0] === cur) {
-          return [g.gid, { v: bal[cur]?.[g.me] ?? 0, c: cur }] as const;
+          return [g.gid, { kind, v: bal[cur]?.[g.me] ?? 0, c: cur }] as const;
         }
-        if (!rates) return [g.gid, null] as const;
-        const conv = convertBalances(bal, cur, rates);
-        return [g.gid, conv ? { v: conv[g.me] ?? 0, c: cur } : null] as const;
+        const conv = rates ? convertBalances(bal, cur, rates) : null;
+        return [g.gid, conv ? { kind, v: conv[g.me] ?? 0, c: cur } : none] as const;
       }),
     ).then((rows) => setNets(Object.fromEntries(rows)));
   }, [groups, rates]);
@@ -88,7 +97,9 @@ export function Home() {
                   className="row min-h-16 hover:bg-raised"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  <Avatar name={g.name} />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-line-strong text-lg">
+                    {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
+                  </span>
                   <span className="min-w-0 flex-1 truncate text-lg font-bold">{g.name}</span>
                   <GroupNet n={nets[g.gid]} />
                 </button>
@@ -143,14 +154,15 @@ export function Home() {
   );
 }
 
-function GroupNet({ n }: { n: { v: number; c: string } | null | undefined }) {
-  if (!n)
+function GroupNet({ n }: { n: Net | undefined }) {
+  if (!n || n.v === null) {
     return (
       <span className="text-muted">
         <Icon name="arrow" />
       </span>
     );
-  if (n.v === 0) return <span className="caps">Square</span>;
+  }
+  if (n.v === 0) return <span className="caps text-owed">Square</span>;
   return (
     <span className="text-right">
       <span className="caps block">{n.v > 0 ? "You get" : "You owe"}</span>

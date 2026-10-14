@@ -2,6 +2,7 @@ import { type GroupSecret, newId, parseAmount } from "@rata/core";
 import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
+import { toast } from "../lib/toast";
 import {
   amountInput,
   CURRENCIES,
@@ -70,11 +71,15 @@ export function Settle({
   };
 
   const remove = async () => {
-    if (!existing || !confirm("Delete this payment? Everyone in the group will see it.")) return;
-    await sync?.add([
+    if (!existing || !sync) return;
+    await sync.add([
       { t: "payment.del", id: newId(), ts: Date.now(), by: saved.me, pid: existing.pid },
     ]);
     go(`/g/${saved.gid}`);
+    toast("Payment deleted", {
+      label: "Undo",
+      run: () => void sync.add([{ ...existing, id: newId(), ts: Date.now(), by: saved.me }]),
+    });
   };
 
   if (pid && !existing && state.group) {
@@ -151,8 +156,8 @@ export function Settle({
           <h2 className="caps mb-2">To</h2>
           <PeoplePicker
             label="To"
-            people={members.filter((m) => m.mid !== from)}
-            indexOf={(mid) => members.findIndex((m) => m.mid === mid)}
+            people={members}
+            disabled={(mid) => mid === from}
             me={saved.me}
             selected={(mid) => mid === toId}
             onToggle={setTo}

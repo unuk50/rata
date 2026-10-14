@@ -24,10 +24,7 @@ function Qr({ text }: { text: string }) {
     };
   }, [text]);
   return (
-    <div
-      className="pop mx-auto aspect-square w-60 bg-white p-3"
-      style={{ "--edge": "var(--color-accent)" } as React.CSSProperties}
-    >
+    <div className="mx-auto aspect-square w-60 bg-white p-3">
       {path && (
         <svg
           viewBox={`0 0 ${path.n} ${path.n}`}
@@ -59,8 +56,9 @@ export function Invite({ saved }: { saved: SavedGroup & GroupSecret }) {
       try {
         await navigator.share({ title: `Join ${name} on Rata`, url: link });
         return;
-      } catch {
-        // The person closed the share sheet. Copy instead.
+      } catch (err) {
+        // The person closed the share sheet: do nothing. Other errors: copy instead.
+        if ((err as Error).name === "AbortError") return;
       }
     }
     await copy();
