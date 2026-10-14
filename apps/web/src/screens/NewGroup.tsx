@@ -14,12 +14,15 @@ export function NewGroup() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const addDraft = () => {
-    const names = draft
-      .split(",")
+  const addNames = (text: string) => {
+    const names = text
+      .split(/[,\n]/)
       .map((n) => n.trim())
       .filter(Boolean);
-    if (names.length) setPeople([...people, ...names.map((name) => ({ id: newId(), name }))]);
+    if (names.length) setPeople((cur) => [...cur, ...names.map((name) => ({ id: newId(), name }))]);
+  };
+  const addDraft = () => {
+    addNames(draft);
     setDraft("");
   };
 
@@ -27,7 +30,7 @@ export function NewGroup() {
     if (!name.trim() || !me.trim()) return;
     setBusy(true);
     localStorage.setItem("rata.myName", me.trim());
-    const all = [...people.map((p) => p.name), ...draft.split(",")]
+    const all = [...people.map((p) => p.name), ...draft.split(/[,\n]/)]
       .map((n) => n.trim())
       .filter(Boolean);
     const secret = newGroupSecret();
@@ -143,6 +146,14 @@ export function NewGroup() {
               placeholder="Add a name"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onPaste={(e) => {
+                const text = e.clipboardData.getData("text");
+                if (/[,\n]/.test(text)) {
+                  e.preventDefault();
+                  addNames(`${draft},${text}`);
+                  setDraft("");
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === ",") {
                   e.preventDefault();

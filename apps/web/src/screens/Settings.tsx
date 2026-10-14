@@ -1,5 +1,5 @@
 import { formatMoney, type GroupSecret, newId, owedShares, toMajor } from "@rata/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
 import { Avatar, Header, Icon } from "../lib/ui";
@@ -8,11 +8,14 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
   const { state, sync } = useGroup(saved);
   const [newName, setNewName] = useState("");
   const [gname, setGname] = useState(state.group?.name ?? "");
+  const [edited, setEdited] = useState(false);
+  const pendingRename = useRef<Promise<void>>(Promise.resolve());
   const g = state.group;
   const loadedName = g?.name;
+  // Follow renames from other devices until this person types in the field.
   useEffect(() => {
-    if (loadedName) setGname((cur) => cur || loadedName);
-  }, [loadedName]);
+    if (loadedName && !edited) setGname(loadedName);
+  }, [loadedName, edited]);
 
   const addMember = async () => {
     if (!newName.trim()) return;
@@ -93,6 +96,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
       )
     )
       return;
+    await pendingRename.current;
     await storage.removeGroup(saved.gid);
     go("/");
   };
@@ -112,9 +116,15 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
             id="gname"
             className="field text-lg font-bold"
             value={gname}
-            onChange={(e) => setGname(e.target.value)}
+            onChange={(e) => {
+              setGname(e.target.value);
+              setEdited(true);
+            }}
             onBlur={() => {
-              if (gname.trim() && gname.trim() !== g?.name) void rename();
+              if (edited && gname.trim() && gname.trim() !== g?.name) {
+                pendingRename.current = rename();
+              }
+              setEdited(false);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur();
