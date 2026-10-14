@@ -198,9 +198,10 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-// Ten hues with no green, red or lime-yellow (those mean owed, owes and selected).
-// People 11 and up reuse a hue.
-const HUES = [20, 220, 295, 170, 45, 245, 320, 195, 270, 340];
+// Nine hues about 25 degrees apart with no green, red or lime-yellow (those mean owed, owes
+// and selected), and a slate grey (-1). Neighbours in the list are far apart on the wheel.
+// People 11 and up reuse a colour.
+const HUES = [20, 220, 290, 170, 45, 250, 320, 195, 340, -1];
 
 /** WCAG relative luminance of an HSL colour (s and l from 0 to 1). */
 function luminance(h: number, s: number, l: number): number {
@@ -215,16 +216,33 @@ function luminance(h: number, s: number, l: number): number {
 
 // For each hue, the lightest background (up to 42%) where white text has 4.5:1 contrast.
 const LIGHT = HUES.map((h) => {
-  let l = 42;
-  while (l > 20 && 1.05 / (luminance(h, 0.55, l / 100) + 0.05) < 4.5) l -= 1;
+  let l = 50;
+  while (l > 20 && 1.05 / (luminance(h, h < 0 ? 0.12 : 0.65, l / 100) + 0.05) < 4.5) l -= 1;
   return l;
 });
 
-/** A stable index from a text id, for things with no position (groups on Home). */
+/** A stable index from a text id (FNV-1a), for things with no position. */
 export function hashIndex(id: string): number {
-  let n = 0;
-  for (const c of id) n = (n * 31 + c.charCodeAt(0)) >>> 0;
-  return n;
+  let n = 0x811c9dc5;
+  for (const c of id) n = Math.imul(n ^ c.charCodeAt(0), 0x01000193);
+  return (n >>> 0) % 1000003;
+}
+
+/**
+ * Colour slots for a set of ids: each starts at its hash and moves to the next free slot,
+ * in id order, so ids on one screen do not share a colour while there are free slots.
+ * Removing one id moves only ids that collided with it.
+ */
+export function colourSlots(ids: string[]): Record<string, number> {
+  const used = new Set<number>();
+  const out: Record<string, number> = {};
+  for (const id of [...ids].sort()) {
+    let i = hashIndex(id) % HUES.length;
+    for (let k = 0; k < HUES.length && used.has(i); k++) i = (i + 1) % HUES.length;
+    used.add(i);
+    out[id] = i;
+  }
+  return out;
 }
 
 /** Colour by position in the group, so people in one group never share a colour. */
@@ -236,7 +254,7 @@ export function Avatar({ name, i, big }: { name: string; i?: number; big?: boole
     <span
       className={`avatar ${big ? "h-12 w-12 text-lg" : "h-10 w-10 text-sm"}`}
       style={{
-        background: `hsl(${hue} 55% ${light}%)`,
+        background: hue < 0 ? `hsl(215 12% ${light}%)` : `hsl(${hue} 65% ${light}%)`,
         color: "#fff",
       }}
       aria-hidden="true"
@@ -404,16 +422,16 @@ export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
     d: "M10 14l-6 3v-2l6-5V5a2 2 0 0 1 4 0v5l6 5v2l-6-3v4l2 2v1l-4-1-4 1v-1l2-2z",
     hue: 195,
   },
-  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 230 },
-  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 270 },
-  Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 330 },
-  Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 290 },
-  Bills: { d: "M13 3L5 14h6l-1 7 8-11h-6z", hue: 44 },
-  Rent: { d: "M3 11l9-7 9 7M5 9v11h14V9M10 20v-6h4v6", hue: 172 },
-  Health: { d: "M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z", hue: 350 },
+  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 225 },
+  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 255 },
+  Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 305 },
+  Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 280 },
+  Bills: { d: "M13 3L5 14h6l-1 7 8-11h-6z", hue: 48 },
+  Rent: { d: "M3 11l9-7 9 7M5 9v11h14V9M10 20v-6h4v6", hue: 100 },
+  Health: { d: "M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z", hue: 355 },
   Gifts: {
     d: "M4 10h16v4H4zM6 14h12v7H6zM12 10v11M12 10c-2-4-6-4-6-1s6 1 6 1c2-4 6-4 6-1s-6 1-6 1",
-    hue: 310,
+    hue: 330,
   },
   Other: { d: "M6 12h.01M12 12h.01M18 12h.01", hue: -1 },
 };

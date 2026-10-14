@@ -204,7 +204,11 @@
 }
 /* A day heading that sticks under the page header while its rows scroll. */
 @utility day-head {
-  @apply meta sticky top-14 z-[5] bg-ink/90 px-4 pt-4 pb-2 backdrop-blur;
+  @apply meta sticky top-14 z-[5] bg-ink px-4 pt-4 pb-2;
+}
+/* A small day marker inside a month. It does not stick. */
+@utility day-mark {
+  @apply px-4 pt-3 pb-1 text-xs font-semibold text-faint;
 }
 /* The invite QR code: white, with soft corners. */
 @utility qr {

@@ -22,6 +22,7 @@ import {
   StatusDot,
   TabPanel,
   Tabs,
+  today,
 } from "../lib/ui";
 
 type Tab = "expenses" | "balances";
@@ -36,12 +37,13 @@ function monthLabel(month: string) {
   });
 }
 
-/** "14 Oct", the day on each row under its month heading. */
-function shortDay(date: string) {
-  return new Date(`${date}T12:00`).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  });
+/** "Today", "Yesterday" or "Mon 12": a small marker where a new day starts inside a month. */
+function dayMark(date: string) {
+  const d = new Date(`${date}T12:00`);
+  const days = Math.round((new Date(`${today()}T12:00`).getTime() - d.getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
 }
 
 function dayLabel(date: string) {
@@ -236,7 +238,12 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                     <section key={d.month}>
                       <h3 className="day-head">{monthLabel(d.month)}</h3>
                       <ul>
-                        {d.items.map((row) =>
+                        {d.items.map((row, i) => [
+                          i === 0 || d.items[i - 1]?.date !== row.date ? (
+                            <li key={`d-${row.date}`} className="day-mark" aria-hidden="true">
+                              {dayMark(row.date)}
+                            </li>
+                          ) : null,
                           row.kind === "e" ? (
                             <li key={row.e.eid}>
                               <button
@@ -248,7 +255,6 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                 <div className="min-w-0 flex-1">
                                   <div className="truncate font-bold">{row.e.desc}</div>
                                   <div className="truncate text-[13px] text-muted">
-                                    {shortDay(row.e.date)} ·{" "}
                                     {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
                                     <Money v={row.e.amount} c={row.e.currency} />
                                   </div>
@@ -266,9 +272,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                 <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
                                 <div className="min-w-0 flex-1">
                                   <Pair from={name(row.p.from)} to={name(row.p.to)} />
-                                  <div className="text-[13px] text-muted">
-                                    {shortDay(row.p.date)} · Payment
-                                  </div>
+                                  <div className="text-[13px] text-muted">Payment</div>
                                 </div>
                                 <span className="num shrink-0 text-sm font-bold text-fg-2">
                                   <Money v={row.p.amount} c={row.p.currency} />
@@ -276,7 +280,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                               </button>
                             </li>
                           ),
-                        )}
+                        ])}
                       </ul>
                     </section>
                   ))}

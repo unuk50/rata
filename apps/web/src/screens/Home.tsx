@@ -2,7 +2,7 @@ import { balances, convertBalances, decodeInvite, foldEvents, type Rates } from 
 import { useEffect, useState } from "react";
 import { go, useGroups, useRates } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
-import { Avatar, hashIndex, Icon, Money } from "../lib/ui";
+import { Avatar, colourSlots, Icon, Money } from "../lib/ui";
 
 interface Net {
   kind?: string;
@@ -61,6 +61,7 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
 export function Home() {
   const [groups] = useGroups();
   const rates = useRates();
+  const slots = colourSlots((groups ?? []).map((g) => g.gid));
   const nets = useMyNets(groups, (rates?.rates as Rates) ?? null);
   const [link, setLink] = useState("");
   const [err, setErr] = useState("");
@@ -117,8 +118,8 @@ export function Home() {
                   className="row press active:bg-panel"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  {/* The group's letter; the colour comes from the group id, so it never changes. */}
-                  <Avatar name={g.name} i={hashIndex(g.gid)} />
+                  {/* The group's letter; the colour comes from the group id, and groups do not share one. */}
+                  <Avatar name={g.name} i={slots[g.gid]} />
                   <span className="min-w-0 flex-1 truncate font-bold">{g.name}</span>
                   <GroupNet n={nets[g.gid]} />
                 </button>
