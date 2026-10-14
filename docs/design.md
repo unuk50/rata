@@ -14,7 +14,7 @@ All tokens are in [`apps/web/src/index.css`](../apps/web/src/index.css) (`@theme
 |---|---|---|
 | `ink` | `#0d0d0d` | Page background |
 | `panel` | `#121212` | Card |
-| `raised` | `#1a1a1a` | Field, tab track, row hover |
+| `raised` | `#1a1a1a` | Field, tab track |
 | `raised-2` | `#232323` | Field in focus, secondary button, toast |
 | `line` | white 10% | Dividers between rows |
 | `line-strong` | `#3d3d3d` | Selected tab |
@@ -39,6 +39,8 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 7. **Motion is short.** 120 ms ease-out for the press (scale to 0.97). No bounce, no long fades.
 8. **Text in ASD-STE100.** Short sentences, active voice, one meaning for each word.
 9. **Minimal text.** Labels have 1 to 3 words. No paragraphs that explain how the app works; a lock icon with "Private" says it. If a control needs a sentence of help, change the control.
+10. **Lists run edge to edge.** One row is 64 px high (`row`), with a 40 px round leading slot: a person or group letter (`<Avatar>`) or a category (`<CategoryIcon>`). No boxes or lines between rows. Tap feedback is `active:bg-panel`, never a hover colour.
+11. **Line icons in the app, emoji only for the group type.** Categories use the line icons in `CATEGORY_ICON`. The only emoji are the group types on New group.
 10. **Tap people, do not pick them from a list.** Use `<PeoplePicker>` for payer, split and settle. Use a `<select>` only for long lists such as currencies.
 11. **Amount first.** On money screens the amount is the biggest thing (`amount`). The main action sits in a sticky bottom bar.
 12. **Signs, not only colour.** Amounts that show direction have `+` or `−` as well as green or red. If a label already says the direction ("You owe"), drop the sign and keep the colour (`<Money tone>`).
@@ -51,8 +53,7 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 
 | Class or component | Use |
 |---|---|
-| `card` | A group of related items. Background `panel`, `radius-surface`, no border. |
-| `divider` | Lines between rows in a card. |
+| `card` | A panel for a short block of text (the privacy note). Lists do not use cards. |
 | `row` | A full-width list row (avatar, text, value). |
 | `btn-primary` | Accent pill button. One per screen. |
 | `btn-secondary` | Grey pill button. |
@@ -76,7 +77,7 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 | `amount` | The big amount input on money screens. |
 | `person`, `person-on` | Tile styles used by `<PeoplePicker>`. |
 | `btn-icon` | 44 × 44 px text-only icon button. |
-| `choice`, `choice-on` | A large option card (for example the event type). |
+| `choice`, `choice-on` | A large option tile (the group type on New group). |
 | `<Avatar>` | Round initial. Pass `i` (index in the group) for a unique colour. |
 | `<Money>` | Formatted amount. `signed` adds the owed and owes colour. |
 | `<Header>` | Sticky screen title with back and right actions. |

@@ -2,7 +2,7 @@ import { balances, convertBalances, decodeInvite, foldEvents, type Rates } from 
 import { useEffect, useState } from "react";
 import { go, useGroups, useRates } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
-import { Icon, KINDS, Money } from "../lib/ui";
+import { Avatar, Icon, Money } from "../lib/ui";
 
 interface Net {
   kind?: string;
@@ -117,10 +117,8 @@ export function Home() {
                   className="row press active:bg-panel"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  {/* The kind of group in a round tile, like the category icon in a group. */}
-                  <span className="avatar h-10 w-10 bg-raised-2 text-lg" aria-hidden="true">
-                    {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
-                  </span>
+                  {/* The group's letter in its own colour, like a person. Order added keeps it stable. */}
+                  <Avatar name={g.name} i={groups.indexOf(g)} />
                   <span className="min-w-0 flex-1 truncate font-bold">{g.name}</span>
                   <GroupNet n={nets[g.gid]} />
                 </button>

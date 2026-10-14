@@ -198,20 +198,24 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-// Eight hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
-// Warm hues get more light, so they do not turn brown. People 9 and up reuse a hue lighter.
-const HUES = [24, 205, 290, 172, 44, 235, 330, 262];
+// Ten colours with no green, red or lime-yellow (those mean owed, owes and selected).
+// Neighbours on the wheel differ in lightness too, so close hues stay apart.
+// People 11 and up reuse a colour.
+const HUES = [20, 220, 295, 170, 45, 245, 320, 195, 270, 340];
+const LIGHT = [44, 40, 40, 32, 48, 52, 46, 46, 56, 64];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
   const n = i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
   const hue = HUES[n % HUES.length] ?? 0;
-  const warm = hue < 60;
-  const light = (Math.floor(n / HUES.length) % 2 === 0 ? 36 : 50) + (warm ? 6 : 0);
+  const light = LIGHT[n % HUES.length] ?? 40;
   return (
     <span
       className={`avatar ${big ? "h-12 w-12 text-lg" : "h-10 w-10 text-sm"}`}
-      style={{ background: `hsl(${hue} 50% ${light}%)`, color: `hsl(${hue} 100% 94%)` }}
+      style={{
+        background: `hsl(${hue} 50% ${light}%)`,
+        color: light > 50 ? `hsl(${hue} 60% 12%)` : `hsl(${hue} 100% 94%)`,
+      }}
       aria-hidden="true"
     >
       {name.trim().charAt(0).toUpperCase() || "?"}
@@ -270,7 +274,7 @@ export function PeoplePicker({
       style={edges.l || edges.r ? { maskImage: mask } : undefined}
     >
       <legend className="sr-only">{label}</legend>
-      <div className="flex w-max gap-1 pr-8">
+      <div className="flex w-max gap-1 pt-1 pr-8">
         {people.map((p, i) => {
           const on = selected(p.mid);
           const off = disabled?.(p.mid) ?? false;
@@ -356,6 +360,7 @@ export const CATEGORIES = [
   "General",
   "Food",
   "Groceries",
+  "Travel",
   "Transport",
   "Stay",
   "Fun",
@@ -372,6 +377,10 @@ export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
   General: { d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", hue: 220 },
   Food: { d: "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 3-3 7h3v11", hue: 24 },
   Groceries: { d: "M3 4h2l2 11h11l2-8H6M9 20h.01M17 20h.01", hue: 160 },
+  Travel: {
+    d: "M10 14l-6 3v-2l6-5V5a2 2 0 0 1 4 0v5l6 5v2l-6-3v4l2 2v1l-4-1-4 1v-1l2-2z",
+    hue: 195,
+  },
   Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 205 },
   Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 262 },
   Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 330 },
@@ -393,7 +402,7 @@ export function CategoryIcon({ c }: { c?: string }) {
   return (
     <span
       className="avatar h-10 w-10"
-      style={{ background: `hsl(${hue} 35% 18%)`, color: `hsl(${hue} 85% 76%)` }}
+      style={{ background: `hsl(${hue} 35% 24%)`, color: `hsl(${hue} 90% 80%)` }}
       aria-hidden="true"
     >
       <svg
@@ -432,14 +441,12 @@ export function AmountField({
   onBlur?: () => void;
   autoFocus?: boolean;
 }) {
-  const sym = currencySymbol(cur);
+  // A letter code (THB) is already on the picker above, so only a symbol (₹, $, ¥) shows here.
+  const sym = /\p{L}{2,}/u.test(currencySymbol(cur)) ? "" : currencySymbol(cur);
   return (
     <div className="flex max-w-full items-baseline justify-center gap-2">
       {sym && (
-        <span
-          className={`shrink-0 font-extrabold text-muted ${sym.length > 1 ? "text-2xl" : "text-4xl"}`}
-          aria-hidden="true"
-        >
+        <span className="shrink-0 text-4xl font-extrabold text-muted" aria-hidden="true">
           {sym}
         </span>
       )}
@@ -463,15 +470,6 @@ export function AmountField({
           autoFocus={autoFocus}
         />
       </span>
-      {/* The same width again on the right, so the digits sit in the true centre. */}
-      {sym && (
-        <span
-          className={`invisible shrink font-extrabold ${sym.length > 1 ? "text-2xl" : "text-4xl"}`}
-          aria-hidden="true"
-        >
-          {sym}
-        </span>
-      )}
     </div>
   );
 }

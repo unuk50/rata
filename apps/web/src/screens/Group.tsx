@@ -391,15 +391,14 @@ function MyShare({
   const net = (e.paidBy[me] ?? 0) - owed;
   // In the split or a payer. A rounded share of 0 still counts as in it.
   const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
-  // One style for every state: a short lowercase word, then the amount when there is one.
+  // One style for every state: a short lowercase word, with the amount under it when there is one.
   if (!inIt) return <span className="shrink-0 text-[13px] text-faint">not in it</span>;
   if (net === 0) return <span className="shrink-0 text-[13px] text-muted">even</span>;
   // History, not a debt now: neutral colours, one short word for your side of this expense.
   return (
-    <span className="num shrink-0 text-sm font-bold text-fg-2">
-      <span className="text-[13px] font-normal text-muted">
-        {net > 0 ? "you lent " : "you owe "}
-      </span>
+    // Two short lines, label over amount, so the column stays narrow and the description has room.
+    <span className="num flex shrink-0 flex-col items-end text-sm font-bold text-fg-2">
+      <span className="text-xs font-normal text-muted">{net > 0 ? "you lent" : "you owe"}</span>
       {formatMoney(Math.abs(net), e.currency)}
     </span>
   );
