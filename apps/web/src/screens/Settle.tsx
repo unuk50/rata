@@ -1,20 +1,40 @@
-import { currencyExponent, type GroupSecret, newId, parseAmount } from "@rata/core";
-import { useState } from "react";
+import { type GroupSecret, newId, parseAmount } from "@rata/core";
+import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { CURRENCIES, Header, Icon, PeoplePicker, today } from "../lib/ui";
+import { amountInput, CURRENCIES, Header, Icon, PeoplePicker, today, zero } from "../lib/ui";
 
-export function Settle({ saved, prefill }: { saved: SavedGroup & GroupSecret; prefill: string[] }) {
+export function Settle({
+  saved,
+  prefill = [],
+  pid,
+}: {
+  saved: SavedGroup & GroupSecret;
+  prefill?: string[];
+  pid?: string;
+}) {
   const { state, sync } = useGroup(saved);
   const [pf, pt, pa, pc] = prefill;
   const [from, setFrom] = useState(pf ?? saved.me ?? "");
   const [to, setTo] = useState(pt ?? "");
   const [currency, setCurrency] = useState(pc ?? "");
-  const [amount, setAmount] = useState(
-    pa && pc ? (Number(pa) / 10 ** currencyExponent(pc)).toFixed(currencyExponent(pc)) : "",
-  );
+  const [amount, setAmount] = useState(pa && pc ? amountInput(Number(pa), pc) : "");
   const [error, setError] = useState("");
+  const [init, setInit] = useState(!pid);
+  const existing = pid ? state.payments.find((p) => p.pid === pid) : undefined;
   const members = state.members;
+
+  if (!init && existing) {
+    setInit(true);
+    setFrom(existing.from);
+    setTo(existing.to);
+    setCurrency(existing.currency);
+    setAmount(amountInput(existing.amount, existing.currency));
+  }
+
+  // A changed input makes the old error wrong, so clear it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these inputs reset the error
+  useEffect(() => setError(""), [from, to, amount, currency]);
   const cur = currency || state.group?.currency || "USD";
   const toId = to && to !== from ? to : members.find((m) => m.mid !== from)?.mid || "";
 
@@ -28,20 +48,47 @@ export function Settle({ saved, prefill }: { saved: SavedGroup & GroupSecret; pr
         id: newId(),
         ts: Date.now(),
         by: saved.me,
-        pid: newId(),
+        pid: existing?.pid ?? newId(),
         from,
         to: toId,
         amount: v,
         currency: cur,
-        date: today(),
+        date: existing?.date ?? today(),
       },
     ]);
     go(`/g/${saved.gid}`);
   };
 
+  const remove = async () => {
+    if (!existing || !confirm("Delete this payment? Everyone in the group will see it.")) return;
+    await sync?.add([
+      { t: "payment.del", id: newId(), ts: Date.now(), by: saved.me, pid: existing.pid },
+    ]);
+    go(`/g/${saved.gid}`);
+  };
+
+  if (pid && !existing && state.group) {
+    return (
+      <div>
+        <Header title="Payment" back={`/g/${saved.gid}`} />
+        <p className="text-muted">This payment was deleted.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-28">
-      <Header title="Record a payment" back={`/g/${saved.gid}`} />
+      <Header
+        title={existing ? "Edit payment" : "Record a payment"}
+        back={`/g/${saved.gid}`}
+        right={
+          existing && (
+            <button type="button" className="btn-ghost btn-sm text-owes" onClick={remove}>
+              Delete
+            </button>
+          )
+        }
+      />
       <div className="space-y-6">
         <section>
           <h2 className="caps mb-2">From</h2>
@@ -83,9 +130,13 @@ export function Settle({ saved, prefill }: { saved: SavedGroup & GroupSecret; pr
           <input
             className="amount"
             inputMode="decimal"
-            placeholder="0"
+            placeholder={zero(cur)}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onBlur={() => {
+              const v = parseAmount(amount, cur);
+              if (v) setAmount(amountInput(v, cur));
+            }}
             aria-label="Amount"
           />
         </div>

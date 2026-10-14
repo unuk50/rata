@@ -106,7 +106,11 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
 
       {!g ? (
         <p className="text-muted">
-          {status === "offline" ? "Offline. Not loaded yet." : "Loading…"}
+          {status === "offline"
+            ? "Offline. Not loaded yet."
+            : status === "invalid"
+              ? "This group is not on the server."
+              : "Loading…"}
         </p>
       ) : (
         <>
@@ -116,20 +120,22 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             style={{ "--edge": edge } as React.CSSProperties}
             onClick={() => setTab("balances")}
           >
-            <div className="caps mb-1">{heroLabel}</div>
             {myNets.length === 0 ? (
-              <div className="text-[clamp(1.75rem,9vw,3rem)] leading-tight font-extrabold text-muted">
-                —
+              <div className="flex items-center gap-3 text-2xl font-extrabold text-fg-2">
+                <Icon name="check" size={28} /> {heroLabel}
               </div>
             ) : (
-              myNets.map(([c, v]) => (
-                <div
-                  key={c}
-                  className="truncate text-[clamp(1.75rem,9vw,3rem)] leading-tight font-extrabold tracking-tight"
-                >
-                  <Money v={v} c={c} signed />
-                </div>
-              ))
+              <>
+                <div className="caps mb-1">{heroLabel}</div>
+                {myNets.map(([c, v]) => (
+                  <div
+                    key={c}
+                    className="truncate text-[clamp(1.75rem,9vw,3rem)] leading-tight font-extrabold tracking-tight"
+                  >
+                    <Money v={v} c={c} signed />
+                  </div>
+                ))}
+              </>
             )}
           </button>
 
@@ -177,16 +183,21 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                               </button>
                             </li>
                           ) : (
-                            <li key={row.p.pid} className="row text-sm">
-                              <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
-                              <span className="text-muted">
-                                <Icon name="arrow" size={16} />
-                              </span>
-                              <Avatar name={realName(row.p.to)} i={idx(row.p.to)} />
-                              <span className="caps flex-1">Paid</span>
-                              <span className="font-bold">
-                                <Money v={row.p.amount} c={row.p.currency} />
-                              </span>
+                            <li key={row.p.pid}>
+                              <button
+                                type="button"
+                                className="row hover:bg-raised"
+                                onClick={() => go(`/g/${saved.gid}/p/${row.p.pid}`)}
+                              >
+                                <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
+                                <div className="min-w-0 flex-1">
+                                  <Pair from={name(row.p.from)} to={name(row.p.to)} />
+                                  <div className="caps">Paid</div>
+                                </div>
+                                <span className="font-bold">
+                                  <Money v={row.p.amount} c={row.p.currency} />
+                                </span>
+                              </button>
                             </li>
                           ),
                         )}
@@ -240,13 +251,12 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                             className={`row ${mine ? "" : "opacity-70"}`}
                           >
                             <Avatar name={realName(t.from)} i={idx(t.from)} />
-                            <span className="text-muted">
-                              <Icon name="arrow" size={16} />
-                            </span>
-                            <Avatar name={realName(t.to)} i={idx(t.to)} />
-                            <span className="min-w-0 flex-1 truncate text-right text-lg font-extrabold">
-                              <Money v={t.amount} c={t.currency} />
-                            </span>
+                            <div className="min-w-0 flex-1">
+                              <Pair from={name(t.from)} to={name(t.to)} />
+                              <div className="truncate text-lg font-extrabold">
+                                <Money v={t.amount} c={t.currency} />
+                              </div>
+                            </div>
                             <button
                               type="button"
                               className={`${mine ? "btn-primary" : "btn-secondary"} btn-sm`}
@@ -309,5 +319,18 @@ function MyShare({
     <span className="text-sm font-extrabold">
       <Money v={net} c={e.currency} signed />
     </span>
+  );
+}
+
+/** "Aarav → Kabir", with full names so two people with one initial stay clear. */
+function Pair({ from, to }: { from: string; to: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-1.5 text-sm font-bold">
+      <span className="truncate">{from}</span>
+      <span className="shrink-0 text-muted">
+        <Icon name="arrow" size={14} />
+      </span>
+      <span className="truncate">{to}</span>
+    </div>
   );
 }

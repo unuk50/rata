@@ -38,14 +38,14 @@ export function Home() {
           {groups
             .slice()
             .sort((a, b) => b.addedAt - a.addedAt)
-            .map((g, i) => (
+            .map((g) => (
               <li key={g.gid}>
                 <button
                   type="button"
                   className="row min-h-16 hover:bg-raised"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  <Avatar name={g.name} i={i} />
+                  <Avatar name={g.name} />
                   <span className="min-w-0 flex-1 truncate text-lg font-bold">{g.name}</span>
                   <span className="text-muted">
                     <Icon name="arrow" />

@@ -1,21 +1,37 @@
 import { decodeInvite, newId } from "@rata/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { storage } from "../lib/storage";
+import { dropSync } from "../lib/sync";
 import { Avatar, Header, Icon } from "../lib/ui";
 
 export function Join({ code }: { code: string }) {
   const secret = useMemo(() => decodeInvite(code), [code]);
   const { state, status, sync } = useGroup(secret);
-  const [name, setName] = useState(localStorage.getItem("rata.myName") ?? "");
+  const [name, setName] = useState<string | null>(null);
+  const joined = useRef(false);
 
   useEffect(() => {
     if (!secret) return;
     void storage.groups().then((all) => {
       const g = all.find((x) => x.gid === secret.gid);
-      if (g?.me) go(`/g/${secret.gid}`);
+      if (g?.me) {
+        joined.current = true;
+        go(`/g/${secret.gid}`);
+      }
     });
+    // Leaving without a pick: stop syncing a group that is not on this device.
+    return () => {
+      if (!joined.current) dropSync(secret.gid);
+    };
   }, [secret]);
+
+  // Suggest the saved name only if nobody in the group has it, so one tap cannot add a twin.
+  const savedName = localStorage.getItem("rata.myName") ?? "";
+  const taken = state.members.some(
+    (m) => m.name.trim().toLowerCase() === savedName.trim().toLowerCase(),
+  );
+  const draft = name ?? (taken ? "" : savedName);
 
   if (!secret) {
     return (
@@ -27,6 +43,7 @@ export function Join({ code }: { code: string }) {
   }
 
   const pick = async (mid: string) => {
+    joined.current = true;
     await storage.upsertGroup({
       ...secret,
       me: mid,
@@ -37,22 +54,28 @@ export function Join({ code }: { code: string }) {
   };
 
   const addMe = async () => {
-    if (!name.trim() || !sync) return;
-    localStorage.setItem("rata.myName", name.trim());
+    const n = draft.trim();
+    if (!n || !sync) return;
+    localStorage.setItem("rata.myName", n);
     const mid = newId();
-    await sync.add([{ t: "member", id: newId(), ts: Date.now(), by: mid, mid, name: name.trim() }]);
+    await sync.add([{ t: "member", id: newId(), ts: Date.now(), by: mid, mid, name: n }]);
     await pick(mid);
   };
 
-  const loading = !state.group && status !== "live";
+  const problem =
+    status === "invalid"
+      ? "This link does not work. Ask for a new one."
+      : status === "offline" && !state.group
+        ? "You are offline. Open the link again when you are online."
+        : null;
 
   return (
     <div>
       <Header title={state.group ? `Join ${state.group.name}` : "Join group"} back="/" />
-      {loading ? (
-        <p className="text-muted">Opening…</p>
+      {problem ? (
+        <p className="card p-5 font-bold">{problem}</p>
       ) : !state.group ? (
-        <p>This group is empty or the link is wrong.</p>
+        <p className="text-muted">Opening…</p>
       ) : (
         <div className="space-y-5">
           <div>
@@ -79,11 +102,16 @@ export function Join({ code }: { code: string }) {
               <input
                 id="newname"
                 className="field min-w-0"
-                value={name}
+                value={draft}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
               />
-              <button type="button" className="btn-primary" disabled={!name.trim()} onClick={addMe}>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!draft.trim()}
+                onClick={addMe}
+              >
                 Join
               </button>
             </div>

@@ -49,6 +49,7 @@ export function App() {
           if (c === "add") return <ExpenseForm saved={g} />;
           if (c === "e" && rest[0]) return <ExpenseForm saved={g} eid={rest[0]} key={rest[0]} />;
           if (c === "settle") return <Settle saved={g} prefill={rest} />;
+          if (c === "p" && rest[0]) return <Settle saved={g} pid={rest[0]} key={rest[0]} />;
           if (c === "invite") return <Invite saved={g} />;
           if (c === "settings") return <Settings saved={g} />;
           return <Group saved={g} />;

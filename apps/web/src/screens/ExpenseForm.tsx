@@ -1,5 +1,4 @@
 import {
-  currencyExponent,
   type ExpenseEvent,
   formatMoney,
   type GroupSecret,
@@ -9,11 +8,12 @@ import {
   type SplitMethod,
   validateExpense,
 } from "@rata/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
 import {
   Avatar,
+  amountInput,
   CATEGORIES,
   CURRENCIES,
   Header,
@@ -21,6 +21,7 @@ import {
   TabPanel,
   Tabs,
   today,
+  zero,
 } from "../lib/ui";
 
 const METHODS: { id: SplitMethod; label: string }[] = [
@@ -29,11 +30,6 @@ const METHODS: { id: SplitMethod; label: string }[] = [
   { id: "percent", label: "%" },
   { id: "shares", label: "Shares" },
 ];
-
-function fmtInput(minor: number, cur: string) {
-  const exp = currencyExponent(cur);
-  return (minor / 10 ** exp).toFixed(exp);
-}
 
 export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; eid?: string }) {
   const { state, sync } = useGroup(saved);
@@ -54,12 +50,15 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   const [inSplit, setInSplit] = useState<Record<string, boolean>>({});
   const [parts, setParts] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  // A changed input makes the old error wrong, so clear it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these inputs reset the error
+  useEffect(() => setError(""), [desc, amount, currency, payer, multiPay, method, inSplit, parts]);
 
   if (!init && group && members.length) {
     setInit(true);
     if (existing) {
       setDesc(existing.desc);
-      setAmount(fmtInput(existing.amount, existing.currency));
+      setAmount(amountInput(existing.amount, existing.currency));
       setCurrency(existing.currency);
       setDate(existing.date);
       setCategory(existing.category ?? "General");
@@ -70,7 +69,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         setPayer("*");
         setMultiPay(
           Object.fromEntries(
-            payers.map((p) => [p, fmtInput(existing.paidBy[p] ?? 0, existing.currency)]),
+            payers.map((p) => [p, amountInput(existing.paidBy[p] ?? 0, existing.currency)]),
           ),
         );
       }
@@ -83,7 +82,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
           Object.entries(existing.split.parts).map(([k, v]) => [
             k,
             existing.split.method === "exact"
-              ? fmtInput(v, existing.currency)
+              ? amountInput(v, existing.currency)
               : existing.split.method === "percent"
                 ? String(v / 100)
                 : String(v),
@@ -231,10 +230,13 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             id="amt"
             className="amount"
             inputMode="decimal"
-            placeholder="0"
+            placeholder={zero(cur)}
             aria-label="Amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onBlur={() => {
+              if (total) setAmount(amountInput(total, cur));
+            }}
             autoFocus={!existing}
           />
         </div>
@@ -275,7 +277,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                   <input
                     className="field num w-32 text-right"
                     inputMode="decimal"
-                    placeholder="0.00"
+                    placeholder={zero(cur)}
                     value={multiPay[m.mid] ?? ""}
                     onChange={(e) => setMultiPay({ ...multiPay, [m.mid]: e.target.value })}
                     aria-label={`${m.name} paid`}
@@ -317,7 +319,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                       <input
                         className="field num w-24 text-right"
                         inputMode="decimal"
-                        placeholder="0"
+                        placeholder={method === "exact" ? zero(cur) : "0"}
                         value={parts[m.mid] ?? ""}
                         onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
                         aria-label={`${m.name} ${method}`}

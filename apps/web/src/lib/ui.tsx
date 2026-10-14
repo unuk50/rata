@@ -1,4 +1,4 @@
-import { formatMoney } from "@rata/core";
+import { currencyExponent, formatMoney } from "@rata/core";
 import type { ReactNode } from "react";
 import { go } from "./hooks";
 import type { SyncStatus } from "./sync";
@@ -57,6 +57,20 @@ export function defaultCurrency(): string {
     // Fall through.
   }
   return "USD";
+}
+
+/** An amount for an input field, with thousands separators: 12,345.50. parseAmount reads it back. */
+export function amountInput(minor: number, cur: string): string {
+  const exp = currencyExponent(cur);
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: exp,
+    maximumFractionDigits: exp,
+  }).format(minor / 10 ** exp);
+}
+
+/** Placeholder for an amount field: 0.00, or 0 for currencies without minor units. */
+export function zero(cur: string): string {
+  return (0).toFixed(currencyExponent(cur));
 }
 
 export function Money({ v, c, signed }: { v: number; c: string; signed?: boolean }) {
@@ -145,23 +159,22 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
     syncing: ["bg-warn", "Syncing"],
     live: ["bg-owed", "Synced"],
     offline: ["bg-faint", "Offline"],
+    invalid: ["bg-owes", "Link not valid"],
   };
-  const [color, label] = map[status];
-  const showText = status === "offline" || pending > 0;
+  const [color, label] = status === "live" && pending > 0 ? ["bg-warn", "Sending"] : map[status];
+  // Synced is the normal state, so it shows nothing. Other states show a dot and a word.
+  if (status === "live" && pending === 0) return <span className="sr-only">{label}</span>;
+  if (status === "loading") return null;
   return (
     <span
       className="caps flex items-center gap-1.5 px-1"
       title={pending ? `${pending} change(s) waiting to send` : label}
     >
       <span className={`h-2 w-2 ${color}`} />
-      {showText ? (
-        <span>
-          {label}
-          {pending > 0 && ` · ${pending}`}
-        </span>
-      ) : (
-        <span className="sr-only">{label}</span>
-      )}
+      <span>
+        {label}
+        {pending > 0 && ` · ${pending}`}
+      </span>
     </span>
   );
 }
@@ -208,7 +221,7 @@ export function PeoplePicker({
   label: string;
 }) {
   return (
-    <fieldset className="-mx-4 overflow-x-auto px-4 pb-1">
+    <fieldset className="-mx-4 min-w-0 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
       <legend className="sr-only">{label}</legend>
       <div className="flex w-max gap-2">
         {people.map((p, i) => {
