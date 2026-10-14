@@ -257,6 +257,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                             <li key={`d-${row.date}`} className="day-mark" aria-hidden="true">
                               {dayMark(row.date)}
                             </li>
+                          ) : i > 0 && d.items[i - 1]?.date !== row.date ? (
+                            // A small gap where the day changes keeps the rhythm of days.
+                            <li key={`g-${row.date}`} className="h-3" aria-hidden="true" />
                           ) : null,
                           row.kind === "e" ? (
                             <li key={row.e.eid}>

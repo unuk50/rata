@@ -135,10 +135,12 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
             }}
           />
           <p className="meta">
-            {g?.currency} ·{" "}
-            {Object.entries(total)
-              .map(([c, v]) => formatMoney(v, c))
-              .join(" + ") || "Nothing spent"}
+            {Object.keys(total).length
+              ? `Total spent: ${Object.entries(total)
+                  .map(([c, v]) => formatMoney(v, c))
+                  .join(" + ")}`
+              : "Nothing spent yet"}{" "}
+            · Main currency {g?.currency}
           </p>
         </section>
         <section>

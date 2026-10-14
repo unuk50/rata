@@ -44,9 +44,11 @@ export function defaultCurrency(): string {
 /** An amount for an input field, with thousands separators: 12,345.50. parseAmount reads it back. */
 export function amountInput(minor: number, cur: string): string {
   const exp = currencyExponent(cur);
+  // Whole amounts drop the zero minor units, as everywhere else: 3,000, not 3,000.00.
+  const shown = minor % 10 ** exp === 0 ? 0 : exp;
   return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: exp,
-    maximumFractionDigits: exp,
+    minimumFractionDigits: shown,
+    maximumFractionDigits: shown,
   }).format(minor / 10 ** exp);
 }
 
@@ -70,8 +72,8 @@ export function currencySymbol(cur: string): string {
 }
 
 /** Placeholder for an amount field: 0.00, or 0 for currencies without minor units. */
-export function zero(cur: string): string {
-  return (0).toFixed(currencyExponent(cur));
+export function zero(_cur: string): string {
+  return "0";
 }
 
 /**
