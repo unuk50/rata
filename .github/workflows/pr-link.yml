@@ -19,7 +19,7 @@ jobs:
         run: |
           case "$AUTHOR" in renovate\[bot\]|dependabot\[bot\]) echo "Dependency update: no link needed."; exit 0;; esac
           body=$(printf '%s' "$BODY" | perl -0pe 's/<!--.*?-->//gs')
-          if printf '%s' "$body" | grep -Eiq '(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]+(#[0-9]+|https://github\.com/[^[:space:]]+/issues/[0-9]+)'; then
+          if printf '%s' "$body" | grep -Eiq '(^|[^[:alnum:]])(close[sd]?|fix(e[sd])?|resolve[sd]?|refs?)[[:space:]]+(#[0-9]+|https://github\.com/[^[:space:]]+/issues/[0-9]+)'; then
             echo "Links an issue."; exit 0
           fi
           if printf '%s' "$body" | grep -Eiq 'direction:[[:space:]]*`?docs/product/[A-Za-z0-9._/#-]+'; then
