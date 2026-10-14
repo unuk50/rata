@@ -33,7 +33,7 @@ Basic tools charge money for barebones, average features: a daily limit on expen
 
 ## Sign-in
 
-Version 1 uses Google sign-in and accepts `@gmail.com` accounts only. Other providers come later. Sign-in shows that a person is real. It does not give access to a group: only the group key in the invite link does that. The server keeps no user table. See [#3](https://github.com/unuk50/rata/issues/3).
+After we freeze all screens, Rata adds Google sign-in. It accepts `@gmail.com` accounts only at first. Other providers come later. Sign-in shows that a person is real. It does not give access to a group: only the group key in the invite link does that. The server keeps no user table. See [#3](https://github.com/unuk50/rata/issues/3).
 
 ## Privacy model
 

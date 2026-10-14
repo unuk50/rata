@@ -17,8 +17,8 @@ Status: **Done**, **Now** (work has started), **Next**, **Later**. Each item lin
 - Done: multi-currency with daily ECB reference rates
 - Done: device-first storage, offline queue, live sync, CSV export, install as an app
 - Done: encryption of each event on the device
-- Now: [Sign in with Google, Gmail only](https://github.com/unuk50/rata/issues/3)
-- Now: [Design system and consistent UI](https://github.com/unuk50/rata/issues/6)
+- Now: [Design system and consistent UI](https://github.com/unuk50/rata/issues/6). We freeze all screens first.
+- Next, after the screens freeze: [Sign in with Google, Gmail only](https://github.com/unuk50/rata/issues/3)
 - Next: activity list, edit history, delete and restore
 - Next: receipts (photos and PDFs), sealed on the device
 - Next: import a CSV from another expense app
