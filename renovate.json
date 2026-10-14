@@ -1,0 +1,13 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommitsDisabled"],
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "14 days",
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "groupName": "minor and patch updates"
+    }
+  ]
+}

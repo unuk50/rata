@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #0f766e;
+  --color-brand-soft: #ccfbf1;
+  --color-owed: #047857;
+  --color-owes: #b91c1c;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+  }
+  input,
+  select,
+  textarea {
+    @apply text-base;
+  }
+}
+
+@utility card {
+  @apply rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium transition active:scale-[0.98] disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand text-white hover:bg-teal-800;
+}
+@utility btn-ghost {
+  @apply btn text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800;
+}
+@utility field {
+  @apply w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-900;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-stone-600 dark:text-stone-300;
+}
+@utility num {
+  font-variant-numeric: tabular-nums;
+}

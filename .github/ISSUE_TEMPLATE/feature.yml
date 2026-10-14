@@ -1,0 +1,13 @@
+name: Feature request
+description: An idea for Rata
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea

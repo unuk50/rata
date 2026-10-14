@@ -1,0 +1,21 @@
+{
+  "name": "@rata/sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "echo 'built by wrangler on deploy'",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "4.9.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20250924.0",
+    "vitest": "3.2.4",
+    "wrangler": "4.40.2"
+  }
+}
