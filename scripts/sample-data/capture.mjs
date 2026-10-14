@@ -872,12 +872,15 @@ async function main() {
     await page.getByLabel("Amount", { exact: true }).fill("1500");
     await shot(
       "foreign-jpy",
-      "Currency with no decimals (JPY): placeholder and preview formatting.",
+      "Currency with no decimals (JPY): preview formatting. This draft is discarded with Back, not saved.",
       { fullPage: true },
     );
     await page.getByRole("button", { name: "Back" }).click();
     await settle(500);
-    await shot("bangkok-after-add", "Bangkok list after adding a THB expense.");
+    await shot(
+      "bangkok-after-add",
+      "Bangkok list after adding a THB expense (the JPY draft was discarded with Back).",
+    );
   });
 
   // ---------------------------------------------------------------- 5. edit + delete
