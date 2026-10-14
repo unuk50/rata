@@ -114,12 +114,26 @@ const goto = async (hash) => {
 const settle = (ms = 600) => page.waitForTimeout(ms);
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Format money exactly as the page does (browser locale). */
-const fmt = (minor, cur) =>
+/**
+ * Format money as the page does (browser locale). Returns every form the page may use:
+ * full minor units, and without them for whole amounts.
+ */
+const fmts = (minor, cur) =>
   page.evaluate(
     ([v, c]) => {
       const f = new Intl.NumberFormat(undefined, { style: "currency", currency: c });
-      return f.format(v / 10 ** (f.resolvedOptions().maximumFractionDigits ?? 2));
+      const digits = f.resolvedOptions().maximumFractionDigits ?? 2;
+      const all = [f.format(v / 10 ** digits)];
+      if (digits > 0 && v % 10 ** digits === 0)
+        all.push(
+          new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: c,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(v / 10 ** digits),
+        );
+      return all;
     },
     [minor, cur],
   );
@@ -311,7 +325,8 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
       continue;
     }
     for (const [cur, v] of entries) {
-      const s = await fmt(Math.abs(v), cur);
+      const all = await fmts(Math.abs(v), cur);
+      const s = all.find((x) => row.includes(x)) ?? all[0];
       const signed = `${v > 0 ? "+" : "−"}${s}`;
       const okDir =
         v > 0
@@ -339,8 +354,9 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
       result.mismatches.push(`Your balance: expected settled, got "${card}"`);
   } else
     for (const [cur, v] of meExp) {
-      const s = await fmt(Math.abs(v), cur);
-      if (!card.includes(s))
+      const all = await fmts(Math.abs(v), cur);
+      const s = all[0];
+      if (!all.some((x) => card.includes(x)))
         result.mismatches.push(`Your balance: expected ${s}, got "${card.replace(/\n/g, " ")}"`);
     }
   // Settlement plan must clear all balances.
@@ -393,7 +409,7 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
           currency: cur,
         }).resolvedOptions().maximumFractionDigits;
         const num = Math.round(Number(c.replace(/[^\d.]/g, "")) * 10 ** digits);
-        if ((await fmt(num, cur)) === c) {
+        if ((await fmts(num, cur)).includes(c)) {
           const k = currencyMode === "per" ? cur : "*";
           left[k] ??= {};
           left[k][from] = (left[k][from] ?? 0) + num;
