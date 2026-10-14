@@ -75,7 +75,11 @@ async function step(name, fn) {
   try {
     await fn();
   } catch (e) {
-    const msg = `STEP FAILED (${journey}/${name}): ${String(e.message).split("\n")[0]}`;
+    const msg = `STEP FAILED (${journey}/${name}): ${String(e.message)
+      .split("\n")
+      .filter((l, i) => i === 0 || /intercepts|not enabled|not visible/.test(l))
+      .slice(0, 3)
+      .join(" | ")}`;
     console.log(`!! ${msg}`);
     manifest.push({
       file: null,
