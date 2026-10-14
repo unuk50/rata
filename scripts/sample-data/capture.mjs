@@ -169,11 +169,14 @@ async function addSelfField() {
 const markPaid = () => page.getByRole("button", { name: /^Mark paid|^Record$|^.+ paid .+$/ });
 
 /**
- * Settle up opens the payment form when you owe someone, otherwise the Balances tab.
- * Returns true when the payment form opened.
+ * Settle up opens the payment form when you owe someone, otherwise the Balances tab (or is
+ * disabled). Returns true when the payment form opened.
  */
 async function openSettle() {
-  await page.getByRole("button", { name: /settle up/i }).click();
+  const settleUp = page.getByRole("button", { name: /settle up/i });
+  // Newer designs disable Settle up when nothing is open.
+  if (await settleUp.isDisabled()) return false;
+  await settleUp.click();
   return page
     .getByRole("button", { name: /save payment/i })
     .waitFor({ timeout: 2500 })
@@ -1205,6 +1208,7 @@ async function main() {
   await step("settle-up-no-debt", async () => {
     await openGroup(G.lonavala.name);
     const hero = await page.locator("main").innerText();
+    const disabled = await page.getByRole("button", { name: /settle up/i }).isDisabled();
     const opened = await openSettle();
     await settle(400);
     await shot(
@@ -1212,9 +1216,11 @@ async function main() {
       "Lonavala (you owe nobody, one payment open between others): what Settle up opens.",
       {
         obs: [
-          opened
-            ? "Settle up opened the payment form."
-            : "Settle up opened the Balances tab (you have nothing to pay).",
+          disabled
+            ? "Settle up is disabled (nothing to pay)."
+            : opened
+              ? "Settle up opened the payment form."
+              : "Settle up opened the Balances tab (you have nothing to pay).",
           ...(/payments? open/i.test(hero)
             ? ["Hero shows 'You're square' with payments open."]
             : []),
