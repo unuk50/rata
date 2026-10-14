@@ -1,0 +1,30 @@
+---
+name: rata-design
+description: Use for any change to the Rata web UI (screens, components, styles, icons, copy). Keeps every screen in the Rata design language, a dark NeoPOP-style system with square edges and 3D pop buttons.
+---
+
+# Rata design skill
+
+Read `docs/design.md` before you change UI. It is the source of truth. This skill is the short checklist.
+
+## Before you write UI code
+
+1. Look for an existing class or component in `apps/web/src/index.css` (`@utility`) and `apps/web/src/lib/ui.tsx`. Use it.
+2. If you need a new pattern, add it to `index.css` or `lib/ui.tsx` **and** to the table in `docs/design.md` in the same pull request. Do not style one screen by hand.
+
+## Hard rules
+
+- Colours come only from the tokens: `ink`, `panel`, `raised`, `line`, `line-strong`, `fg`, `fg-2`, `muted`, `faint`, `accent`, `accent-edge`, `on-accent`, `owed`, `owes`, `warn`, `info`. No hex values and no Tailwind palette colours (`stone-*`, `teal-*`, `gray-*` and so on) in components.
+- No `rounded-*` classes. No `shadow-*` classes. Depth comes only from the `pop` edge on buttons.
+- No `dark:` variants. The app is dark only.
+- One `btn-primary` on each screen, for the main action. Others are `btn-secondary` or `btn-ghost`.
+- Labels and section titles use `caps`. Amounts use `num` and weight 800 when they are the focus.
+- `owed` (green) and `owes` (red) mean the direction of money only. Red also means delete or error.
+- Do not use CRED names, logos, illustrations or fonts. The font is Manrope.
+- UI text is in ASD-STE100: short sentences, active voice, simple words.
+
+## Check before you push
+
+- `grep -rnE "stone-|gray-|teal-|rounded|shadow-|dark:|#[0-9a-fA-F]{3,6}" apps/web/src/screens apps/web/src/App.tsx` returns nothing.
+- Build the web app and look at each changed screen at 390 px width. Check that the selected tab, disabled buttons and empty states are readable.
+- Pressing a pop button moves it down and right by 4 px.

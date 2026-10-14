@@ -1,44 +1,146 @@
 @import "tailwindcss";
+@import "@fontsource-variable/manrope/wght.css";
 
+/*
+ * Rata design tokens. Dark, high contrast, square edges, 3D "pop" actions.
+ * Ideas from the open-source NeoPOP system (Apache-2.0). Rules: docs/design.md.
+ * Use these tokens only. Do not add raw colours in components.
+ */
 @theme {
-  --color-brand: #0f766e;
-  --color-brand-soft: #ccfbf1;
-  --color-owed: #047857;
-  --color-owes: #b91c1c;
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* Surfaces, darkest to lightest */
+  --color-ink: #0d0d0d; /* page */
+  --color-panel: #121212; /* card */
+  --color-raised: #161616; /* field, tab track */
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-line-strong: #3d3d3d;
+
+  /* Text: white at fixed opacities */
+  --color-fg: rgb(255 255 255 / 0.9);
+  --color-fg-2: rgb(255 255 255 / 0.7);
+  --color-muted: rgb(255 255 255 / 0.5);
+  --color-faint: rgb(255 255 255 / 0.3);
+
+  /* Brand accent: one colour for the main action only */
+  --color-accent: #e5fe40;
+  --color-accent-edge: #a0b22d;
+  --color-on-accent: #0d0d0d;
+
+  /* Money meaning */
+  --color-owed: #06c270; /* you get money back */
+  --color-owes: #ee4d37; /* you owe money */
+  --color-owes-edge: #b32e1f;
+  --color-warn: #f08d32;
+  --color-info: #144cc7;
 }
 
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    color-scheme: dark;
   }
   body {
-    @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+    @apply bg-ink font-sans text-fg antialiased;
   }
   input,
   select,
   textarea {
     @apply text-base;
   }
+  ::selection {
+    @apply bg-accent text-on-accent;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }
 
+/* Containers */
 @utility card {
-  @apply rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900;
+  @apply border border-line bg-panel;
 }
-@utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium transition active:scale-[0.98] disabled:opacity-50;
+@utility divider {
+  @apply divide-y divide-line;
 }
-@utility btn-primary {
-  @apply btn bg-brand text-white hover:bg-teal-800;
+
+/* Text styles */
+@utility caps {
+  @apply text-[11px] font-extrabold tracking-[0.12em] text-muted uppercase;
 }
-@utility btn-ghost {
-  @apply btn text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800;
-}
-@utility field {
-  @apply w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-900;
-}
-@utility label {
-  @apply mb-1 block text-sm font-medium text-stone-600 dark:text-stone-300;
+@utility title {
+  @apply text-[28px] leading-tight font-extrabold tracking-tight text-fg;
 }
 @utility num {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Pop buttons. The face sits up and left. A hard 45-degree edge shows
+ * below and right. On press, the face moves into the edge.
+ */
+@utility pop {
+  --pop-depth: 4px;
+  box-shadow:
+    1px 1px 0 var(--edge, var(--color-line-strong)),
+    2px 2px 0 var(--edge, var(--color-line-strong)),
+    3px 3px 0 var(--edge, var(--color-line-strong)),
+    4px 4px 0 var(--edge, var(--color-line-strong));
+  transition:
+    transform 0.12s ease-in-out,
+    box-shadow 0.12s ease-in-out;
+  &:active:not(:disabled) {
+    transform: translate(var(--pop-depth), var(--pop-depth));
+    box-shadow: 0 0 0 transparent;
+  }
+}
+@utility btn {
+  @apply relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 px-5 text-sm font-extrabold tracking-wide uppercase select-none disabled:cursor-not-allowed disabled:opacity-40;
+}
+@utility btn-primary {
+  @apply btn pop bg-accent text-on-accent;
+  --edge: var(--color-accent-edge);
+}
+@utility btn-secondary {
+  @apply btn pop border border-fg-2 bg-ink text-fg;
+  --edge: var(--color-fg-2);
+}
+@utility btn-danger {
+  @apply btn pop bg-owes text-white;
+  --edge: var(--color-owes-edge);
+}
+@utility btn-ghost {
+  @apply btn px-3 text-fg-2 hover:text-fg active:opacity-70;
+}
+@utility btn-sm {
+  @apply min-h-8 px-3 text-xs;
+}
+
+/* Inputs */
+@utility field {
+  @apply w-full rounded-none border border-line-strong bg-raised px-3 py-2.5 text-fg outline-none placeholder:text-faint focus:border-fg;
+}
+@utility label {
+  @apply caps mb-1.5 block;
+}
+
+/* Tabs and choices */
+@utility tabs {
+  @apply grid border border-line-strong bg-raised p-1 text-xs font-extrabold tracking-wide uppercase;
+}
+@utility tab {
+  @apply py-2 text-muted transition-colors;
+}
+@utility tab-on {
+  @apply bg-fg text-ink!;
+}
+@utility choice {
+  @apply border border-line-strong bg-panel p-3 text-left transition-colors;
+}
+@utility choice-on {
+  @apply border-accent bg-accent/10;
+}
+@utility row {
+  @apply flex w-full items-center gap-3 px-4 py-3 text-left;
 }

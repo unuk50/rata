@@ -1,5 +1,5 @@
 import { formatMoney, type GroupSecret, newId, owedShares, toMajor } from "@rata/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
 import { Avatar, Header } from "../lib/ui";
@@ -9,6 +9,10 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
   const [newName, setNewName] = useState("");
   const [gname, setGname] = useState(state.group?.name ?? "");
   const g = state.group;
+  const loadedName = g?.name;
+  useEffect(() => {
+    if (loadedName) setGname((cur) => cur || loadedName);
+  }, [loadedName]);
 
   const addMember = async () => {
     if (!newName.trim()) return;
@@ -111,15 +115,11 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
               value={gname}
               onChange={(e) => setGname(e.target.value)}
             />
-            <button
-              type="button"
-              className="btn-ghost border border-stone-300 dark:border-stone-700"
-              onClick={rename}
-            >
+            <button type="button" className="btn-secondary" onClick={rename}>
               Save
             </button>
           </div>
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-muted">
             Main currency {g?.currency} · Total spent{" "}
             {Object.entries(total)
               .map(([c, v]) => formatMoney(v, c))
@@ -127,13 +127,13 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
           </p>
         </section>
         <section>
-          <h2 className="mb-2 font-medium">People</h2>
-          <ul className="card divide-y divide-stone-200 dark:divide-stone-800">
+          <h2 className="caps mb-2">People</h2>
+          <ul className="card divider">
             {state.members.map((m) => (
               <li key={m.mid} className="flex items-center gap-3 p-3">
                 <Avatar name={m.name} />
                 {m.name}
-                {m.mid === saved.me && <span className="text-stone-400">(you)</span>}
+                {m.mid === saved.me && <span className="text-faint">(you)</span>}
               </li>
             ))}
           </ul>
@@ -145,11 +145,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
               onChange={(e) => setNewName(e.target.value)}
               aria-label="New person name"
             />
-            <button
-              type="button"
-              className="btn-ghost border border-stone-300 dark:border-stone-700"
-              onClick={addMember}
-            >
+            <button type="button" className="btn-secondary" onClick={addMember}>
               Add
             </button>
           </div>
@@ -157,16 +153,12 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
         <section className="space-y-2">
           <button
             type="button"
-            className="btn-ghost w-full border border-stone-300 dark:border-stone-700"
+            className="btn-secondary w-full"
             onClick={() => go(`/g/${saved.gid}/invite`)}
           >
             Invite link
           </button>
-          <button
-            type="button"
-            className="btn-ghost w-full border border-stone-300 dark:border-stone-700"
-            onClick={exportCsv}
-          >
+          <button type="button" className="btn-secondary w-full" onClick={exportCsv}>
             Export CSV
           </button>
           <button type="button" className="btn-ghost w-full text-owes" onClick={leave}>

@@ -68,10 +68,11 @@ export function NewGroup() {
                 key={k.id}
                 type="button"
                 onClick={() => setKind(k.id)}
-                className={`rounded-xl border p-3 text-left ${kind === k.id ? "border-brand bg-brand-soft/40 dark:bg-teal-950" : "border-stone-300 dark:border-stone-700"}`}
+                aria-pressed={kind === k.id}
+                className={kind === k.id ? "choice choice-on" : "choice"}
               >
-                <div className="font-medium">{k.label}</div>
-                <div className="text-xs text-stone-500">{k.hint}</div>
+                <div className="font-extrabold">{k.label}</div>
+                <div className="text-xs text-muted">{k.hint}</div>
               </button>
             ))}
           </div>
@@ -90,7 +91,7 @@ export function NewGroup() {
               <option key={c}>{c}</option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-stone-500">
+          <p className="mt-1 text-xs text-muted">
             Each expense can use its own currency. Totals use this one.
           </p>
         </div>
@@ -112,13 +113,13 @@ export function NewGroup() {
             value={others}
             onChange={(e) => setOthers(e.target.value)}
           />
-          <p className="mt-1 text-xs text-stone-500">
+          <p className="mt-1 text-xs text-muted">
             Separate names with commas. People can also add themselves from the invite link.
           </p>
         </div>
         <button
           type="button"
-          className="btn-primary w-full py-3"
+          className="btn-primary w-full"
           disabled={busy || !name.trim() || !me.trim()}
           onClick={create}
         >

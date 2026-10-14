@@ -10,7 +10,7 @@ import {
 import { useState } from "react";
 import { go, useGroup, useRates } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Avatar, Header, Money, StatusDot } from "../lib/ui";
+import { Avatar, Header, Money, StatusDot, Tabs } from "../lib/ui";
 
 export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   const { state, status, pending } = useGroup(saved);
@@ -72,24 +72,24 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
       />
 
       {!g ? (
-        <p className="text-stone-500">
+        <p className="text-muted">
           {status === "offline"
             ? "Offline. This group has not loaded on this device yet."
             : "Loading…"}
         </p>
       ) : (
         <>
-          <div className="card mb-4 flex items-center justify-between p-4">
+          <div className="card mb-4 flex items-end justify-between p-5">
             <div>
-              <div className="text-sm text-stone-500">Your balance</div>
-              <div className="text-2xl font-semibold">
+              <div className="caps mb-1">Your balance</div>
+              <div className="text-3xl font-extrabold tracking-tight">
                 {myNets.length === 0 ? (
-                  <span className="text-stone-500">Settled up</span>
+                  <span className="text-muted">Settled up</span>
                 ) : (
                   myNets.map(([c, v]) => (
                     <div key={c}>
                       <Money v={v} c={c} signed />
-                      <span className="ml-2 text-xs font-normal text-stone-500">
+                      <span className="caps ml-2 align-middle">
                         {v > 0 ? "owed to you" : "you owe"}
                       </span>
                     </div>
@@ -99,30 +99,28 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             </div>
             <button
               type="button"
-              className="btn-ghost border border-stone-300 dark:border-stone-700"
+              className="btn-secondary"
               onClick={() => go(`/g/${saved.gid}/invite`)}
             >
               Invite
             </button>
           </div>
 
-          <div className="mb-3 grid grid-cols-2 rounded-xl bg-stone-200/60 p-1 text-sm dark:bg-stone-800">
-            {(["expenses", "balances"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className={`rounded-lg py-2 font-medium capitalize ${tab === t ? "bg-white shadow-sm dark:bg-stone-900" : "text-stone-500"}`}
-              >
-                {t}
-              </button>
-            ))}
+          <div className="mb-3">
+            <Tabs
+              options={[
+                { id: "expenses", label: "Expenses" },
+                { id: "balances", label: "Balances" },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
           </div>
 
           {tab === "expenses" && (
             <ul className="space-y-2">
               {state.expenses.length === 0 && state.payments.length === 0 && (
-                <li className="card p-6 text-center text-stone-500">
+                <li className="card p-6 text-center text-muted">
                   No expenses yet. Add the first one.
                 </li>
               )}
@@ -139,17 +137,17 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                         className="card flex w-full items-center gap-3 p-3 text-left"
                         onClick={() => go(`/g/${saved.gid}/e/${row.e.eid}`)}
                       >
-                        <div className="w-10 shrink-0 text-center text-xs leading-tight text-stone-500">
+                        <div className="caps w-10 shrink-0 text-center leading-tight">
                           {new Date(`${row.e.date}T12:00`).toLocaleDateString(undefined, {
                             month: "short",
                           })}
-                          <div className="text-lg font-semibold text-stone-800 dark:text-stone-200">
+                          <div className="text-lg font-extrabold text-fg">
                             {row.e.date.slice(8)}
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">{row.e.desc}</div>
-                          <div className="truncate text-xs text-stone-500">
+                          <div className="truncate font-bold">{row.e.desc}</div>
+                          <div className="truncate text-xs text-muted">
                             {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
                             <Money v={row.e.amount} c={row.e.currency} />
                           </div>
@@ -160,7 +158,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                   ) : (
                     <li
                       key={row.p.pid}
-                      className="card flex items-center gap-3 p-3 text-sm text-stone-600 dark:text-stone-300"
+                      className="card flex items-center gap-3 p-3 text-sm text-fg-2"
                     >
                       <span className="w-10 text-center" aria-hidden="true">
                         ↔
@@ -177,7 +175,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
 
           {tab === "balances" && (
             <div className="space-y-4">
-              <ul className="card divide-y divide-stone-200 dark:divide-stone-800">
+              <ul className="card divider">
                 {state.members.map((m) => {
                   const nets = netOf(m.mid);
                   return (
@@ -185,16 +183,16 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                       <Avatar name={m.name} />
                       <span className="flex-1">
                         {m.name}
-                        {m.mid === me && <span className="text-stone-400"> (you)</span>}
+                        {m.mid === me && <span className="text-faint"> (you)</span>}
                       </span>
                       {nets.length === 0 ? (
-                        <span className="text-sm text-stone-400">settled</span>
+                        <span className="text-sm text-faint">settled</span>
                       ) : (
                         <span className="text-right text-sm">
                           {nets.map(([c, v]) => (
                             <div key={c}>
                               <Money v={v} c={c} signed />{" "}
-                              <span className="text-xs text-stone-500">
+                              <span className="text-xs text-muted">
                                 {v > 0 ? "gets back" : "owes"}
                               </span>
                             </div>
@@ -206,16 +204,16 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                 })}
               </ul>
               {multi && (
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-muted">
                   {converted
                     ? `Converted to ${cur} at ECB reference rates${rates?.date ? ` of ${rates.date}` : ""}.`
                     : "Rates are not available. Each currency settles on its own."}
                 </p>
               )}
               <div>
-                <h2 className="mb-2 font-medium">Fewest payments to settle</h2>
+                <h2 className="caps mb-2">Fewest payments to settle</h2>
                 {plan.length === 0 ? (
-                  <p className="card p-4 text-stone-500">Everyone is settled up.</p>
+                  <p className="card p-4 text-muted">Everyone is settled up.</p>
                 ) : (
                   <ul className="space-y-2">
                     {plan.map((t) => (
@@ -229,7 +227,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                         </span>
                         <button
                           type="button"
-                          className="btn-ghost border border-stone-300 px-3 py-1.5 text-sm dark:border-stone-700"
+                          className="btn-secondary btn-sm"
                           onClick={() =>
                             go(`/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`)
                           }
@@ -244,17 +242,17 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             </div>
           )}
 
-          <div className="fixed inset-x-0 bottom-0 flex justify-center gap-3 bg-gradient-to-t from-stone-50 via-stone-50/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:from-stone-950 dark:via-stone-950/90">
+          <div className="fixed inset-x-0 bottom-0 flex justify-center gap-3 border-t border-line bg-ink/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
             <button
               type="button"
-              className="btn-ghost border border-stone-300 bg-white dark:border-stone-700 dark:bg-stone-900"
+              className="btn-secondary"
               onClick={() => go(`/g/${saved.gid}/settle`)}
             >
               Settle up
             </button>
             <button
               type="button"
-              className="btn-primary px-6 shadow-lg"
+              className="btn-primary px-6"
               onClick={() => go(`/g/${saved.gid}/add`)}
             >
               + Add expense
@@ -281,10 +279,10 @@ function MyShare({
     owed = 0;
   }
   const net = (e.paidBy[me] ?? 0) - owed;
-  if (net === 0) return <span className="text-xs text-stone-400">not involved</span>;
+  if (net === 0) return <span className="text-xs text-faint">not involved</span>;
   return (
     <span className="text-right text-xs">
-      <div className="text-stone-500">{net > 0 ? "you lent" : "you owe"}</div>
+      <div className="text-muted">{net > 0 ? "you lent" : "you owe"}</div>
       <Money v={net} c={e.currency} signed />
     </span>
   );

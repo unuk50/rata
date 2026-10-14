@@ -60,7 +60,7 @@ export function defaultCurrency(): string {
 }
 
 export function Money({ v, c, signed }: { v: number; c: string; signed?: boolean }) {
-  const cls = signed ? (v > 0 ? "text-owed" : v < 0 ? "text-owes" : "text-stone-500") : "";
+  const cls = signed ? (v > 0 ? "text-owed" : v < 0 ? "text-owes" : "text-muted") : "";
   return <span className={`num ${cls}`}>{formatMoney(signed ? Math.abs(v) : v, c)}</span>;
 }
 
@@ -74,7 +74,7 @@ export function Header({
   right?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-2 border-b border-stone-200 bg-stone-50/90 px-4 py-3 backdrop-blur dark:border-stone-800 dark:bg-stone-950/90">
+    <header className="sticky top-0 z-10 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
       {back !== undefined && (
         <button
           type="button"
@@ -95,7 +95,7 @@ export function Header({
           </svg>
         </button>
       )}
-      <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight">{title}</h1>
       {right}
     </header>
   );
@@ -103,18 +103,18 @@ export function Header({
 
 export function StatusDot({ status, pending }: { status: SyncStatus; pending: number }) {
   const map: Record<SyncStatus, [string, string]> = {
-    loading: ["bg-stone-400", "Loading"],
-    syncing: ["bg-amber-500", "Syncing"],
-    live: ["bg-emerald-500", "Live"],
-    offline: ["bg-stone-400", "Offline"],
+    loading: ["bg-faint", "Loading"],
+    syncing: ["bg-warn", "Syncing"],
+    live: ["bg-owed", "Live"],
+    offline: ["bg-faint", "Offline"],
   };
   const [color, label] = map[status];
   return (
     <span
-      className="flex items-center gap-1.5 text-xs text-stone-500"
+      className="caps flex items-center gap-1.5"
       title={pending ? `${pending} change(s) waiting to send` : label}
     >
-      <span className={`h-2 w-2 rounded-full ${color}`} />
+      <span className={`h-2 w-2 ${color}`} />
       {label}
       {pending > 0 && ` · ${pending}`}
     </span>
@@ -125,8 +125,12 @@ export function Avatar({ name }: { name: string }) {
   const hue = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
   return (
     <span
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-      style={{ background: `hsl(${hue} 45% 45%)` }}
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center border text-sm font-extrabold"
+      style={{
+        background: `hsl(${hue} 60% 14%)`,
+        borderColor: `hsl(${hue} 70% 45%)`,
+        color: `hsl(${hue} 90% 80%)`,
+      }}
       aria-hidden="true"
     >
       {name.trim().charAt(0).toUpperCase() || "?"}
@@ -160,3 +164,34 @@ export const KINDS = [
   { id: "party", label: "Party", hint: "One evening, many guests" },
   { id: "other", label: "Other", hint: "Anything else" },
 ] as const;
+
+export function Tabs<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { id: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div
+      className="tabs"
+      role="tablist"
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="tab"
+          aria-selected={value === o.id}
+          onClick={() => onChange(o.id)}
+          className={value === o.id ? "tab tab-on" : "tab"}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}

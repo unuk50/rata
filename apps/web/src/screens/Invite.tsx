@@ -36,16 +36,14 @@ export function Invite({ saved }: { saved: SavedGroup & GroupSecret }) {
           Send this link to the people in <b>{name}</b>. Anyone with the link can see and add
           expenses.
         </p>
-        <div className="card break-all p-3 font-mono text-xs text-stone-600 dark:text-stone-300">
-          {link}
-        </div>
+        <div className="card break-all p-3 font-mono text-xs text-fg-2">{link}</div>
         <div className="flex gap-2">
           <button type="button" className="btn-primary flex-1" onClick={share}>
             {copied ? "Copied" : "Share link"}
           </button>
           <button
             type="button"
-            className="btn-ghost border border-stone-300 dark:border-stone-700"
+            className="btn-secondary"
             onClick={async () => {
               await navigator.clipboard.writeText(link);
               setCopied(true);
@@ -54,7 +52,7 @@ export function Invite({ saved }: { saved: SavedGroup & GroupSecret }) {
             Copy
           </button>
         </div>
-        <div className="rounded-xl bg-brand-soft/50 p-3 text-sm text-teal-900 dark:bg-teal-950 dark:text-teal-100">
+        <div className="border-l-2 border-accent bg-panel p-3 text-sm text-fg-2">
           The part after <code>#</code> is the group key. Browsers never send it to our server, so
           only people with the link can read this group.
         </div>

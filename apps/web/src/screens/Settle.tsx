@@ -93,7 +93,7 @@ export function Settle({ saved, prefill }: { saved: SavedGroup & GroupSecret; pr
             ))}
           </select>
           <input
-            className="field num flex-1 text-right text-lg"
+            className="field num flex-1 text-right text-xl font-extrabold"
             inputMode="decimal"
             placeholder="0.00"
             value={amount}
@@ -101,11 +101,11 @@ export function Settle({ saved, prefill }: { saved: SavedGroup & GroupSecret; pr
             aria-label="Amount"
           />
         </div>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-muted">
           Pay with any app you like. Rata records the payment. It does not move money.
         </p>
         {error && <p className="text-sm text-owes">{error}</p>}
-        <button type="button" className="btn-primary w-full py-3" onClick={save}>
+        <button type="button" className="btn-primary w-full" onClick={save}>
           Save payment
         </button>
       </div>

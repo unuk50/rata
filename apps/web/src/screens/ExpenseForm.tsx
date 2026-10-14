@@ -12,7 +12,7 @@ import {
 import { useMemo, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Avatar, CATEGORIES, CURRENCIES, Header, today } from "../lib/ui";
+import { Avatar, CATEGORIES, CURRENCIES, Header, Tabs, today } from "../lib/ui";
 
 const METHODS: { id: SplitMethod; label: string }[] = [
   { id: "equal", label: "Equally" },
@@ -178,7 +178,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     return (
       <div>
         <Header title="Expense" back={`/g/${saved.gid}`} />
-        <p className="text-stone-500">This expense was deleted.</p>
+        <p className="text-muted">This expense was deleted.</p>
       </div>
     );
   }
@@ -196,7 +196,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         back={`/g/${saved.gid}`}
         right={
           existing && (
-            <button type="button" className="btn-ghost text-owes" onClick={remove}>
+            <button type="button" className="btn-ghost btn-sm text-owes" onClick={remove}>
               Delete
             </button>
           )
@@ -238,7 +238,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             </label>
             <input
               id="amt"
-              className="field num text-right text-lg"
+              className="field num text-right text-xl font-extrabold"
               inputMode="decimal"
               placeholder="0.00"
               value={amount}
@@ -294,7 +294,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             <option value="*">More than one person</option>
           </select>
           {payer === "*" && (
-            <div className="card mt-2 divide-y divide-stone-200 dark:divide-stone-800">
+            <div className="card mt-2 divider">
               {members.map((m) => (
                 <div key={m.mid} className="flex items-center gap-3 p-2">
                   <Avatar name={m.name} />
@@ -315,25 +315,16 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
 
         <div>
           <span className="label">Split</span>
-          <div className="mb-2 grid grid-cols-4 rounded-xl bg-stone-200/60 p-1 text-sm dark:bg-stone-800">
-            {METHODS.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMethod(m.id)}
-                className={`rounded-lg py-2 font-medium ${method === m.id ? "bg-white shadow-sm dark:bg-stone-900" : "text-stone-500"}`}
-              >
-                {m.label}
-              </button>
-            ))}
+          <div className="mb-2">
+            <Tabs options={METHODS} value={method} onChange={setMethod} />
           </div>
-          <div className="card divide-y divide-stone-200 dark:divide-stone-800">
+          <div className="card divider">
             {members.map((m) => (
               <div key={m.mid} className="flex items-center gap-3 p-2">
                 {method === "equal" ? (
                   <input
                     type="checkbox"
-                    className="h-5 w-5 accent-teal-700"
+                    className="h-5 w-5 accent-accent"
                     checked={!!inSplit[m.mid]}
                     onChange={(e) => setInSplit({ ...inSplit, [m.mid]: e.target.checked })}
                     aria-label={`Include ${m.name}`}
@@ -351,20 +342,20 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                     aria-label={`${m.name} ${method}`}
                   />
                 )}
-                <span className="num w-24 text-right text-sm text-stone-500">
+                <span className="num w-24 text-right text-sm text-muted">
                   {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "–"}
                 </span>
               </div>
             ))}
           </div>
           {method === "exact" && total !== null && (
-            <p className={`mt-1 text-xs ${sumParts === total ? "text-stone-500" : "text-owes"}`}>
+            <p className={`mt-1 text-xs ${sumParts === total ? "text-muted" : "text-owes"}`}>
               {formatMoney(sumParts, cur)} of {formatMoney(total, cur)}
             </p>
           )}
           {method === "percent" && (
             <p
-              className={`mt-1 text-xs ${Math.round(sumParts * 100) === 10000 ? "text-stone-500" : "text-owes"}`}
+              className={`mt-1 text-xs ${Math.round(sumParts * 100) === 10000 ? "text-muted" : "text-owes"}`}
             >
               {sumParts}% of 100%
             </p>
@@ -384,7 +375,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         </div>
 
         {error && <p className="text-sm text-owes">{error}</p>}
-        <button type="button" className="btn-primary w-full py-3" onClick={save}>
+        <button type="button" className="btn-primary w-full" onClick={save}>
           Save
         </button>
       </div>
