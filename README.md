@@ -18,6 +18,10 @@ We are fed up with basic tools that charge money for barebones, average features
 - CSV export
 - Installs as an app from the browser (PWA)
 
+## Where Rata is going
+
+Read the [product direction](docs/product/README.md) and the [roadmap](docs/product/ROADMAP.md). Next: Google sign-in, a consistent design, event types (home, vacation, poker, party, gift pool), then a private "My money" layer that stays on your device.
+
 ## Privacy
 
 Each group has a random 256-bit key. The key is in the invite link after the `#` sign, and browsers never send that part to a server. The device encrypts each event with AES-GCM before sync. The server stores encrypted events and a hash of an access token. It cannot read amounts, names or notes.
@@ -30,7 +34,7 @@ Lose every invite link and every device, and the group is gone. That is the cost
 apps/web        React PWA. Writes to IndexedDB first, then syncs in the background.
 apps/sync       Cloudflare Worker + one SQLite Durable Object per group. Serves the web app too.
 packages/core   Money type, event schema, splits, balances, settle-up plan, encryption.
-docs/           Product requirements and architecture notes.
+docs/           Product direction (docs/product), architecture notes.
 ```
 
 Money is an integer count of minor units plus an ISO 4217 code. Balances come from the event log, never from stored totals. Property tests prove that each split adds up to the total and that every group adds up to zero in each currency.
