@@ -95,7 +95,7 @@ export function Home() {
         Open source ·{" "}
         <a
           className="underline"
-          href="https://github.com/"
+          href="https://github.com/unuk50/rata"
           target="_blank"
           rel="noreferrer"
           id="repo-link"
