@@ -75,7 +75,7 @@ export function currencySymbol(cur: string): string {
   }
 }
 
-/** Width for an amount input that grows with its text, so the sign stays next to the digits. */
+/** Width for an amount input that grows with its text, so the sign stays next to the digits. The `amount` class caps it to the row. */
 export function amountWidth(text: string, cur: string): string {
   return `${Math.max(text.length || zero(cur).length, 1) + 0.5}ch`;
 }

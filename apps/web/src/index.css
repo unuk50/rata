@@ -196,7 +196,7 @@
   border-radius: var(--radius-control);
 }
 @utility amount {
-  @apply min-w-0 bg-transparent text-5xl font-extrabold tracking-tight text-fg outline-none placeholder:text-faint;
+  @apply max-w-full min-w-0 shrink bg-transparent text-5xl font-extrabold tracking-tight text-fg outline-none placeholder:text-faint;
   font-variant-numeric: tabular-nums;
 }
 @utility row {
