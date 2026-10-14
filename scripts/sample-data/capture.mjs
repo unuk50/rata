@@ -1249,7 +1249,7 @@ async function main() {
     await openGroup(G.goa.name);
     await page
       .getByRole("tabpanel")
-      .getByText(/^(paid|payment)$/i)
+      .getByText(/^(.* · )?(paid|payment)$/i)
       .first()
       .click();
     await page.getByRole("button", { name: /save payment/i }).waitFor();
