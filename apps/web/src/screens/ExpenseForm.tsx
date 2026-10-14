@@ -226,7 +226,10 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     return a + (method === "exact" ? (parseAmount(raw, cur) ?? 0) : Number(raw) || 0);
   }, 0);
   const inCount = members.filter((m) => inSplit[m.mid]).length;
-  const shares = preview ? Object.values(preview).filter((v) => v > 0) : [];
+  // Shares of the people in the split, zeros included: 0.01 for three is 0.01, 0, 0.
+  const shares = preview
+    ? members.filter((m) => inSplit[m.mid]).map((m) => preview[m.mid] ?? 0)
+    : [];
   const each = shares.length ? Math.min(...shares) : undefined;
   // A remainder cent can make shares differ. Then the amount is "about" each share.
   const about = shares.some((v) => v !== each) ? "about " : "";
@@ -338,7 +341,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                 <p className="caps mt-2">
                   {inCount === 0
                     ? "Tap people to split"
-                    : `${inCount} ${inCount === 1 ? "person" : "people"}${each ? ` · ${about}${formatMoney(each, cur)} each` : ""}`}
+                    : `${inCount} ${inCount === 1 ? "person" : "people"}${each !== undefined ? ` · ${about}${formatMoney(each, cur)} each` : ""}`}
                 </p>
               </>
             ) : (
