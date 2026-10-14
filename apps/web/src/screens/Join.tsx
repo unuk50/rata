@@ -87,16 +87,16 @@ export function Join({ code }: { code: string }) {
         <div className="space-y-6">
           <div>
             <h2 className="meta mb-2">Tap your name</h2>
-            <ul className="card divider">
+            <ul className="-mx-4">
               {state.members.map((m, i) => (
                 <li key={m.mid}>
                   <button
                     type="button"
-                    className="row min-h-16 hover:bg-raised"
+                    className="row press active:bg-panel"
                     onClick={() => pick(m.mid)}
                   >
-                    <Avatar name={m.name} i={i} big />
-                    <span className="min-w-0 flex-1 truncate text-lg font-bold">{m.name}</span>
+                    <Avatar name={m.name} i={i} />
+                    <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
                     <span className="text-muted">
                       <Icon name="arrow" />
                     </span>
@@ -106,7 +106,7 @@ export function Join({ code }: { code: string }) {
             </ul>
           </div>
           {adding ? (
-            <div className="card space-y-2 p-4">
+            <div className="space-y-2">
               <label className="label" htmlFor="newname">
                 Your name
               </label>

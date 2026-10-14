@@ -19,7 +19,7 @@ All tokens are in [`apps/web/src/index.css`](../apps/web/src/index.css) (`@theme
 | `line` | white 10% | Dividers between rows |
 | `line-strong` | `#3d3d3d` | Selected tab |
 | `radius-surface` | 16 px | Cards, tiles, sheets |
-| `radius-control` | 12 px | Fields, buttons, tabs |
+| `radius-control` | 12 px | Fields and small controls. Buttons, tabs, chips and avatars are full pills. |
 | `fg` / `fg-2` / `muted` / `faint` | white 90 / 70 / 50 / 30% | Heading / body / label / hint |
 | `accent` | `#e5fe40` | The **one** main action on a screen. Selection. |
 | `owed` | `#06c270` | Money comes back to you |
@@ -36,7 +36,7 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 4. **Sentence case.** Labels, section titles, tabs and buttons use sentence case. Small meta text uses `meta` (13 px, 600, `muted`). Do not use tracked capitals.
 5. **Money is big and bold.** A balance uses 800 weight and tabular numbers (`num`). Green and red show only the direction of money, not decoration.
 6. **Dark only.** No light theme. Contrast of body text on `ink` is at least 4.5:1.
-7. **Motion is short.** 120 ms ease-in-out for the press. No bounce, no long fades.
+7. **Motion is short.** 120 ms ease-out for the press (scale to 0.97). No bounce, no long fades.
 8. **Text in ASD-STE100.** Short sentences, active voice, one meaning for each word.
 9. **Minimal text.** Labels have 1 to 3 words. No paragraphs that explain how the app works; a lock icon with "Private" says it. If a control needs a sentence of help, change the control.
 10. **Tap people, do not pick them from a list.** Use `<PeoplePicker>` for payer, split and settle. Use a `<select>` only for long lists such as currencies.
@@ -67,8 +67,10 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 | `bottom-bar` | The sticky action bar. It fades into the page, with no top line. |
 | `day-head` | A sticky day heading in a list. |
 | `qr` | The white invite QR code with soft corners. |
-| `tile`, `avatar` | Group tile on Home; round person initial. |
-| `<Tabs>` + `<TabPanel>` | Switch between views or split methods. Selected tab is solid white. Give both the same `id`. |
+| `avatar` | Round 40 px leading slot: a person initial, a group kind or a category. |
+| `<CategoryIcon>` | Line icon on a tinted disc for each expense category. |
+| `<AmountField>` | The big centred amount with the currency sign as lists show it. |
+| `<Tabs>` + `<TabPanel>` | Switch between views or split methods. The selected tab is a lighter grey pill. Give both the same `id`. |
 | `<PeoplePicker>` | A row of avatars to tap. Selected avatars get an accent ring. Single or multi select. |
 | `<Icon>`, `<IconButton>` | Square-cap line icons. Icon buttons are 44 × 44 px. |
 | `amount` | The big amount input on money screens. |

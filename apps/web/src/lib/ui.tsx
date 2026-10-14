@@ -58,26 +58,15 @@ export function reAmount(text: string, from: string, to: string): string {
   return amountInput(Math.round(major * 10 ** currencyExponent(to)), to);
 }
 
-/** The short sign for a currency, like ₹ or $. Empty when the currency has no short sign. */
+/** The sign for a currency as lists show it (₹, $, THB), so the field and the lists agree. */
 export function currencySymbol(cur: string): string {
   try {
-    const sym =
-      new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: cur,
-        currencyDisplay: "narrowSymbol",
-      })
-        .formatToParts(0)
-        .find((p) => p.type === "currency")?.value ?? "";
-    return sym.length <= 2 ? sym : "";
+    return formatMoney(0, cur)
+      .replace(/[\d.,\s\u00a0]/g, "")
+      .trim();
   } catch {
-    return "";
+    return cur;
   }
-}
-
-/** Width for an amount input that grows with its text, so the sign stays next to the digits. The `amount` class caps it to the row. */
-export function amountWidth(text: string, cur: string): string {
-  return `${Math.max(text.length || zero(cur).length, 1) + 0.5}ch`;
 }
 
 /** Placeholder for an amount field: 0.00, or 0 for currencies without minor units. */
@@ -209,19 +198,20 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-// Ten hues, with no green, red or lime-yellow (those mean owed, owes and selected).
-// Neighbours in the list are far apart on the wheel. People 11 and up reuse a hue lighter.
-const HUES = [24, 212, 290, 172, 44, 258, 332, 192, 236, 310];
+// Eight hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
+// Warm hues get more light, so they do not turn brown. People 9 and up reuse a hue lighter.
+const HUES = [24, 205, 290, 172, 44, 235, 330, 262];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
   const n = i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
   const hue = HUES[n % HUES.length] ?? 0;
-  const light = Math.floor(n / HUES.length) % 2 === 0 ? 30 : 42;
+  const warm = hue < 60;
+  const light = (Math.floor(n / HUES.length) % 2 === 0 ? 36 : 50) + (warm ? 6 : 0);
   return (
     <span
-      className={`avatar ${big ? "h-12 w-12 text-lg" : "h-9 w-9 text-sm"}`}
-      style={{ background: `hsl(${hue} 55% ${light}%)`, color: `hsl(${hue} 100% 90%)` }}
+      className={`avatar ${big ? "h-12 w-12 text-lg" : "h-10 w-10 text-sm"}`}
+      style={{ background: `hsl(${hue} 50% ${light}%)`, color: `hsl(${hue} 100% 94%)` }}
       aria-hidden="true"
     >
       {name.trim().charAt(0).toUpperCase() || "?"}
@@ -280,7 +270,7 @@ export function PeoplePicker({
       style={edges.l || edges.r ? { maskImage: mask } : undefined}
     >
       <legend className="sr-only">{label}</legend>
-      <div className="flex w-max gap-2 pr-8">
+      <div className="flex w-max gap-1 pr-8">
         {people.map((p, i) => {
           const on = selected(p.mid);
           const off = disabled?.(p.mid) ?? false;
@@ -294,7 +284,7 @@ export function PeoplePicker({
               className={`${on ? "person person-on" : "person"} ${off ? "cursor-not-allowed opacity-25 grayscale" : ""}`}
             >
               <Avatar name={p.name} i={indexOf ? indexOf(p.mid) : i} big />
-              <span className="w-16 truncate text-center text-xs font-bold">
+              <span className="w-14 truncate text-center text-xs font-bold">
                 {p.mid === me ? "You" : p.name}
               </span>
             </button>
@@ -377,21 +367,114 @@ export const CATEGORIES = [
   "Other",
 ];
 
-/** One glyph for each category, for the leading slot of an expense row. */
-export const CATEGORY_EMOJI: Record<string, string> = {
-  General: "\ud83e\uddfe",
-  Food: "\ud83c\udf7d\ufe0f",
-  Groceries: "\ud83d\uded2",
-  Transport: "\ud83d\ude95",
-  Stay: "\ud83d\udecf\ufe0f",
-  Fun: "\ud83c\udf9f\ufe0f",
-  Shopping: "\ud83d\udecd\ufe0f",
-  Bills: "\ud83d\udca1",
-  Rent: "\ud83c\udfe0",
-  Health: "\ud83d\udc8a",
-  Gifts: "\ud83c\udf81",
-  Other: "\u2728",
+/** One line icon and one hue for each category, for the leading slot of an expense row. */
+export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
+  General: { d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", hue: 220 },
+  Food: { d: "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 3-3 7h3v11", hue: 24 },
+  Groceries: { d: "M3 4h2l2 11h11l2-8H6M9 20h.01M17 20h.01", hue: 160 },
+  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 205 },
+  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 262 },
+  Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 330 },
+  Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 290 },
+  Bills: { d: "M13 3L5 14h6l-1 7 8-11h-6z", hue: 44 },
+  Rent: { d: "M3 11l9-7 9 7M5 9v11h14V9M10 20v-6h4v6", hue: 172 },
+  Health: { d: "M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z", hue: 350 },
+  Gifts: {
+    d: "M4 10h16v4H4zM6 14h12v7H6zM12 10v11M12 10c-2-4-6-4-6-1s6 1 6 1c2-4 6-4 6-1s-6 1-6 1",
+    hue: 310,
+  },
+  Other: { d: "M6 12h.01M12 12h.01M18 12h.01", hue: 235 },
 };
+
+/** The leading slot of an expense row: the category icon on a tinted disc. */
+export function CategoryIcon({ c }: { c?: string }) {
+  const k = c && CATEGORY_ICON[c] ? c : "General";
+  const { d, hue } = CATEGORY_ICON[k] ?? { d: "", hue: 0 };
+  return (
+    <span
+      className="avatar h-10 w-10"
+      style={{ background: `hsl(${hue} 35% 18%)`, color: `hsl(${hue} 85% 76%)` }}
+      aria-hidden="true"
+    >
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d={d} />
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * The big amount, with the currency sign in front. A hidden copy of the text sets the width,
+ * so sign and digits stay together in the centre at any length.
+ */
+export function AmountField({
+  id,
+  cur,
+  value,
+  onChange,
+  onBlur,
+  autoFocus,
+}: {
+  id?: string;
+  cur: string;
+  value: string;
+  onChange: (v: string) => void;
+  onBlur?: () => void;
+  autoFocus?: boolean;
+}) {
+  const sym = currencySymbol(cur);
+  return (
+    <div className="flex max-w-full items-baseline justify-center gap-2">
+      {sym && (
+        <span
+          className={`shrink-0 font-extrabold text-muted ${sym.length > 1 ? "text-2xl" : "text-4xl"}`}
+          aria-hidden="true"
+        >
+          {sym}
+        </span>
+      )}
+      <span className="inline-grid min-w-0">
+        <span
+          className="amount invisible col-start-1 row-start-1 whitespace-pre"
+          aria-hidden="true"
+        >
+          {value || zero(cur)}
+        </span>
+        <input
+          id={id}
+          className="amount col-start-1 row-start-1 w-full"
+          size={1}
+          inputMode="decimal"
+          placeholder={zero(cur)}
+          aria-label="Amount"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          autoFocus={autoFocus}
+        />
+      </span>
+      {/* The same width again on the right, so the digits sit in the true centre. */}
+      {sym && (
+        <span
+          className={`invisible shrink font-extrabold ${sym.length > 1 ? "text-2xl" : "text-4xl"}`}
+          aria-hidden="true"
+        >
+          {sym}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export const KINDS = [
   { id: "trip", label: "Trip", emoji: "\u2708\ufe0f" },

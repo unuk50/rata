@@ -15,12 +15,11 @@ import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
 import { toast } from "../lib/toast";
 import {
+  AmountField,
   Avatar,
   amountInput,
-  amountWidth,
   CATEGORIES,
   CURRENCIES,
-  currencySymbol,
   Header,
   Notice,
   PeoplePicker,
@@ -274,7 +273,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   const isToday = date === today();
 
   return (
-    <div className="pb-36">
+    <div className="pb-40">
       <Header
         title={existing ? "Edit expense" : "Add expense"}
         back={`/g/${saved.gid}`}
@@ -328,27 +327,16 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               <option key={c}>{c}</option>
             ))}
           </select>
-          <div className="flex max-w-full items-baseline justify-center gap-1">
-            {currencySymbol(cur) && (
-              <span className="text-4xl font-extrabold text-muted" aria-hidden="true">
-                {currencySymbol(cur)}
-              </span>
-            )}
-            <input
-              id="amt"
-              className="amount"
-              style={{ width: amountWidth(amount, cur) }}
-              inputMode="decimal"
-              placeholder={zero(cur)}
-              aria-label="Amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              onBlur={() => {
-                if (total) setAmount(amountInput(total, cur));
-              }}
-              autoFocus={!existing}
-            />
-          </div>
+          <AmountField
+            id="amt"
+            cur={cur}
+            value={amount}
+            onChange={setAmount}
+            onBlur={() => {
+              if (total) setAmount(amountInput(total, cur));
+            }}
+            autoFocus={!existing}
+          />
         </div>
         <input
           id="desc"
@@ -379,7 +367,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               onToggle={setPayer}
             />
           ) : (
-            <div className="card">
+            <div className="-mx-2">
               {members.map((m, i) => (
                 <div key={m.mid} className="flex items-center gap-3 p-2">
                   <Avatar name={m.name} i={i} />
@@ -429,7 +417,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               </>
             ) : (
               <>
-                <div className="card">
+                <div className="-mx-2">
                   {members.map((m, i) => (
                     <div key={m.mid} className="flex items-center gap-3 p-2">
                       <Avatar name={m.name} i={i} />

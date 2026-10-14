@@ -13,7 +13,7 @@ import { go, useGroup, useRates } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
 import {
   Avatar,
-  CATEGORY_EMOJI,
+  CategoryIcon,
   Header,
   Icon,
   IconButton,
@@ -120,7 +120,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   }
 
   return (
-    <div className="pb-28">
+    <div className="pb-36">
       <Header
         title={g?.name ?? saved.name}
         back="/"
@@ -221,10 +221,10 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                             <li key={row.e.eid}>
                               <button
                                 type="button"
-                                className="row press hover:bg-panel"
+                                className="row press active:bg-panel"
                                 onClick={() => go(`/g/${saved.gid}/e/${row.e.eid}`)}
                               >
-                                <Glyph c={row.e.category} />
+                                <CategoryIcon c={row.e.category} />
                                 <div className="min-w-0 flex-1">
                                   <div className="truncate font-bold">{row.e.desc}</div>
                                   <div className="truncate text-[13px] text-muted">
@@ -239,7 +239,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                             <li key={row.p.pid}>
                               <button
                                 type="button"
-                                className="row press hover:bg-panel"
+                                className="row press active:bg-panel"
                                 onClick={() => go(`/g/${saved.gid}/p/${row.p.pid}`)}
                               >
                                 <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
@@ -397,7 +397,9 @@ function MyShare({
   // History, not a debt now: neutral colours, one short word for your side of this expense.
   return (
     <span className="num shrink-0 text-sm font-bold text-fg-2">
-      <span className="text-[13px] font-normal text-muted">{net > 0 ? "lent " : "owe "}</span>
+      <span className="text-[13px] font-normal text-muted">
+        {net > 0 ? "you lent " : "you owe "}
+      </span>
       {formatMoney(Math.abs(net), e.currency)}
     </span>
   );
@@ -413,14 +415,5 @@ function Pair({ from, to }: { from: string; to: string }) {
       </span>
       <span className="truncate">{to}</span>
     </div>
-  );
-}
-
-/** The leading slot of an expense row: the category glyph in a round tile. */
-function Glyph({ c }: { c?: string }) {
-  return (
-    <span className="avatar h-9 w-9 bg-raised-2 text-base" aria-hidden="true">
-      {CATEGORY_EMOJI[c ?? "General"] ?? CATEGORY_EMOJI.General}
-    </span>
   );
 }

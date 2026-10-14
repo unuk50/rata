@@ -106,7 +106,7 @@ export function Home() {
       )}
 
       {groups && groups.length > 0 && (
-        <ul className="card divider">
+        <ul className="-mx-4">
           {groups
             .slice()
             .sort((a, b) => (nets[b.gid]?.last ?? b.addedAt) - (nets[a.gid]?.last ?? a.addedAt))
@@ -114,20 +114,14 @@ export function Home() {
               <li key={g.gid}>
                 <button
                   type="button"
-                  className="row min-h-18 hover:bg-raised"
+                  className="row press active:bg-panel"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
-                  {/* The group's letter tells groups of one kind apart; the kind is a badge. */}
-                  <span className="tile h-12 w-12 text-lg">
-                    {g.name.trim().charAt(0).toUpperCase() || "?"}
-                    <span
-                      className="absolute right-0.5 bottom-0.5 text-[11px] leading-none"
-                      aria-hidden="true"
-                    >
-                      {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
-                    </span>
+                  {/* The kind of group in a round tile, like the category icon in a group. */}
+                  <span className="avatar h-10 w-10 bg-raised-2 text-lg" aria-hidden="true">
+                    {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-lg font-bold">{g.name}</span>
+                  <span className="min-w-0 flex-1 truncate font-bold">{g.name}</span>
                   <GroupNet n={nets[g.gid]} />
                 </button>
               </li>
@@ -190,9 +184,9 @@ function GroupNet({ n }: { n: Net | undefined }) {
       </span>
     );
   if (!n || n.v === null) return null;
-  if (n.v === 0) return <span className="meta">You're settled</span>;
+  if (n.v === 0) return <span className="meta shrink-0">Settled</span>;
   return (
-    <span className="text-right">
+    <span className="shrink-0 text-right">
       <span className="meta block">{n.v > 0 ? "You're owed" : "You owe"}</span>
       <span className="font-extrabold">
         <Money v={n.v} c={n.c} tone />

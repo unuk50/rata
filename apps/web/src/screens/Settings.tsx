@@ -143,7 +143,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
         </section>
         <section>
           <h2 className="meta mb-2">People</h2>
-          <ul className="card divider">
+          <ul className="-mx-4">
             {state.members.map((m, i) => (
               <li key={m.mid} className="row">
                 <Avatar name={m.name} i={i} />

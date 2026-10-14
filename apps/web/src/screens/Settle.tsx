@@ -4,17 +4,15 @@ import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
 import { toast } from "../lib/toast";
 import {
+  AmountField,
   amountInput,
-  amountWidth,
   CURRENCIES,
-  currencySymbol,
   Header,
   Icon,
   Notice,
   PeoplePicker,
   reAmount,
   today,
-  zero,
 } from "../lib/ui";
 
 export function Settle({
@@ -106,7 +104,7 @@ export function Settle({
   }
 
   return (
-    <div className="pb-28">
+    <div className="pb-36">
       <Header
         title={existing ? "Edit payment" : "Record a payment"}
         back={`/g/${saved.gid}`}
@@ -133,26 +131,15 @@ export function Settle({
               <option key={c}>{c}</option>
             ))}
           </select>
-          <div className="flex max-w-full items-baseline justify-center gap-1">
-            {currencySymbol(cur) && (
-              <span className="text-4xl font-extrabold text-muted" aria-hidden="true">
-                {currencySymbol(cur)}
-              </span>
-            )}
-            <input
-              className="amount"
-              style={{ width: amountWidth(amount, cur) }}
-              inputMode="decimal"
-              placeholder={zero(cur)}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              onBlur={() => {
-                const v = parseAmount(amount, cur);
-                if (v) setAmount(amountInput(v, cur));
-              }}
-              aria-label="Amount"
-            />
-          </div>
+          <AmountField
+            cur={cur}
+            value={amount}
+            onChange={setAmount}
+            onBlur={() => {
+              const v = parseAmount(amount, cur);
+              if (v) setAmount(amountInput(v, cur));
+            }}
+          />
         </div>
         <section>
           <h2 className="meta mb-2">From</h2>
