@@ -19,8 +19,8 @@
   /* Text: white at fixed opacities */
   --color-fg: rgb(255 255 255 / 0.9);
   --color-fg-2: rgb(255 255 255 / 0.7);
-  --color-muted: rgb(255 255 255 / 0.5);
-  --color-faint: rgb(255 255 255 / 0.3);
+  --color-muted: rgb(255 255 255 / 0.62);
+  --color-faint: rgb(255 255 255 / 0.48); /* 4.8:1 on ink */
 
   /* Brand accent: one colour for the main action only */
   --color-accent: #e5fe40;
@@ -42,6 +42,7 @@
   }
   body {
     @apply bg-ink font-sans text-fg antialiased;
+    overflow-x: clip;
   }
   input,
   select,
@@ -94,9 +95,16 @@
     transform: translate(var(--pop-depth), var(--pop-depth));
     box-shadow: 0 0 0 transparent;
   }
+  &:disabled {
+    box-shadow: none;
+    background: transparent;
+    color: var(--color-muted);
+    border: 1px solid var(--color-line-strong);
+    opacity: 1;
+  }
 }
 @utility btn {
-  @apply relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 px-5 text-sm font-extrabold tracking-wide uppercase select-none disabled:cursor-not-allowed disabled:opacity-40;
+  @apply relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 px-4 text-sm whitespace-nowrap font-extrabold tracking-wide uppercase select-none disabled:cursor-not-allowed disabled:opacity-40;
 }
 @utility btn-primary {
   @apply btn pop bg-accent text-on-accent;
@@ -114,7 +122,10 @@
   @apply btn px-3 text-fg-2 hover:text-fg active:opacity-70;
 }
 @utility btn-sm {
-  @apply min-h-8 px-3 text-xs;
+  @apply min-h-9 px-3 text-xs;
+}
+@utility btn-icon {
+  @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center text-fg-2 hover:text-fg active:opacity-70;
 }
 
 /* Inputs */
@@ -130,7 +141,7 @@
   @apply grid border border-line-strong bg-raised p-1 text-xs font-extrabold tracking-wide uppercase;
 }
 @utility tab {
-  @apply py-2 text-muted transition-colors;
+  @apply min-h-9 py-2 text-muted;
 }
 @utility tab-on {
   @apply bg-fg text-ink!;
@@ -140,6 +151,18 @@
 }
 @utility choice-on {
   @apply border-accent bg-accent/10;
+}
+@utility person {
+  @apply flex flex-col items-center gap-1.5 border border-transparent p-1.5 text-muted opacity-60;
+  transition: transform 0.12s ease-in-out;
+}
+@utility person-on {
+  @apply border-accent text-fg opacity-100;
+  box-shadow: 3px 3px 0 var(--color-accent-edge);
+}
+@utility amount {
+  @apply w-full min-w-0 bg-transparent text-right text-5xl font-extrabold tracking-tight text-fg outline-none placeholder:text-faint;
+  font-variant-numeric: tabular-nums;
 }
 @utility row {
   @apply flex w-full items-center gap-3 px-4 py-3 text-left;

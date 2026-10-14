@@ -36,6 +36,11 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 6. **Dark only.** No light theme. Contrast of body text on `ink` is at least 4.5:1.
 7. **Motion is short.** 120 ms ease-in-out for the press. No bounce, no long fades.
 8. **Text in ASD-STE100.** Short sentences, active voice, one meaning for each word.
+9. **Minimal text.** Labels have 1 to 3 words. No paragraphs that explain how the app works; a lock icon with "Private" says it. If a control needs a sentence of help, change the control.
+10. **Tap people, do not pick them from a list.** Use `<PeoplePicker>` for payer, split and settle. Use a `<select>` only for long lists such as currencies.
+11. **Amount first.** On money screens the amount is the biggest thing (`amount`). The main action sits in a sticky bottom bar.
+12. **Signs, not only colour.** Amounts that show direction have `+` or `−` as well as green or red.
+13. **Colours by position.** `<Avatar i={index}>` takes its colour from the person's place in the group, so two people in one group never share a colour.
 
 ## Components
 
@@ -50,9 +55,14 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 | `btn-ghost` | Text button: back, delete link, low-priority actions. |
 | `btn-sm` | Smaller size for buttons in a row. |
 | `field`, `label` | Input, select, textarea, and their label. |
-| `<Tabs>` | Switch between views or split methods. Selected tab is solid white. |
+| `<Tabs>` + `<TabPanel>` | Switch between views or split methods. Selected tab is solid white. Give both the same `id`. |
+| `<PeoplePicker>` | A row of avatar tiles to tap. Selected tiles get the accent edge. Single or multi select. |
+| `<Icon>`, `<IconButton>` | Square-cap line icons. Icon buttons are 44 × 44 px. |
+| `amount` | The big amount input on money screens. |
+| `person`, `person-on` | Tile styles used by `<PeoplePicker>`. |
+| `btn-icon` | 44 × 44 px text-only icon button. |
 | `choice`, `choice-on` | A large option card (for example the event type). |
-| `<Avatar>` | Square initial with a colour from the name. |
+| `<Avatar>` | Square initial. Pass `i` (index in the group) for a unique colour. |
 | `<Money>` | Formatted amount. `signed` adds the owed and owes colour. |
 | `<Header>` | Sticky screen title with back and right actions. |
 | `caps`, `title`, `num` | Label text, page title, tabular numbers. |

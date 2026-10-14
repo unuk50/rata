@@ -1,7 +1,7 @@
 import { decodeInvite } from "@rata/core";
 import { useState } from "react";
 import { go, useGroups } from "../lib/hooks";
-import { Avatar } from "../lib/ui";
+import { Avatar, Icon } from "../lib/ui";
 
 export function Home() {
   const [groups] = useGroups();
@@ -10,90 +10,77 @@ export function Home() {
 
   const join = () => {
     const s = decodeInvite(link);
-    if (!s) return setErr("This is not a Rata invite link.");
+    if (!s) return setErr("Not a Rata link.");
     go(`/join/${s.gid}.${s.key}`);
   };
 
   return (
-    <div className="space-y-8 pt-8">
+    <div className="space-y-8 pt-8 pb-10">
       <div className="flex items-center gap-3">
-        <img src="/icon.svg" alt="" className="h-10 w-10" />
-        <div>
-          <h1 className="title">rata</h1>
-          <p className="caps">Share costs · No limits · No ads · Private</p>
-        </div>
+        <img src="/icon.svg" alt="" className="h-11 w-11" />
+        <h1 className="title flex-1">rata</h1>
+        <span className="caps flex items-center gap-1.5" title="Encrypted on your device">
+          <Icon name="lock" size={14} />
+          Private
+        </span>
       </div>
 
       {groups && groups.length === 0 && (
-        <div className="card space-y-3 p-5">
-          <h2 className="text-xl leading-snug font-extrabold">
-            Split costs with the people you trust.
-          </h2>
-          <p className="text-sm text-fg-2">
-            Make a group for a trip, a home or a party. Share the link. Everyone adds what they
-            paid, in any currency. Rata shows who owes whom.
-          </p>
-          <p className="text-sm text-fg-2">
-            Your data is encrypted on this device. The key is in the invite link only, so our server
-            cannot read amounts, names or notes.
-          </p>
-        </div>
+        <p className="text-[34px] leading-[1.05] font-extrabold tracking-tight">
+          Split costs.
+          <br />
+          <span className="text-accent">Not friendships.</span>
+        </p>
       )}
 
       {groups && groups.length > 0 && (
-        <section>
-          <h2 className="caps mb-2">Your groups</h2>
-          <ul className="card divider">
-            {groups
-              .slice()
-              .sort((a, b) => b.addedAt - a.addedAt)
-              .map((g) => (
-                <li key={g.gid}>
-                  <button
-                    type="button"
-                    className="row hover:bg-raised"
-                    onClick={() => go(`/g/${g.gid}`)}
-                  >
-                    <Avatar name={g.name} />
-                    <span className="flex-1 font-bold">{g.name}</span>
-                    <span className="text-faint" aria-hidden="true">
-                      ›
-                    </span>
-                  </button>
-                </li>
-              ))}
-          </ul>
-        </section>
+        <ul className="card divider">
+          {groups
+            .slice()
+            .sort((a, b) => b.addedAt - a.addedAt)
+            .map((g, i) => (
+              <li key={g.gid}>
+                <button
+                  type="button"
+                  className="row min-h-16 hover:bg-raised"
+                  onClick={() => go(`/g/${g.gid}`)}
+                >
+                  <Avatar name={g.name} i={i} />
+                  <span className="min-w-0 flex-1 truncate text-lg font-bold">{g.name}</span>
+                  <span className="text-muted">
+                    <Icon name="arrow" />
+                  </span>
+                </button>
+              </li>
+            ))}
+        </ul>
       )}
 
       <button type="button" className="btn-primary w-full" onClick={() => go("/new")}>
-        New group
+        <Icon name="plus" size={18} /> New group
       </button>
 
-      <div className="card space-y-2 p-4">
-        <label className="label" htmlFor="invite">
-          Have an invite link?
-        </label>
+      <div>
         <div className="flex gap-2">
           <input
             id="invite"
-            className="field"
-            placeholder="Paste the link"
+            className="field min-w-0"
+            placeholder="Paste an invite link"
+            aria-label="Invite link"
             value={link}
             onChange={(e) => {
               setLink(e.target.value);
               setErr("");
             }}
           />
-          <button type="button" className="btn-secondary" onClick={join}>
+          <button type="button" className="btn-secondary" disabled={!link.trim()} onClick={join}>
             Join
           </button>
         </div>
-        {err && <p className="text-sm text-owes">{err}</p>}
+        {err && <p className="mt-1 text-sm text-owes">{err}</p>}
       </div>
 
-      <p className="pb-8 text-center text-xs text-faint">
-        Open source ·{" "}
+      <p className="text-center text-xs text-faint">
         <a
           className="underline"
           href="https://github.com/unuk50/rata"
@@ -101,7 +88,7 @@ export function Home() {
           rel="noreferrer"
           id="repo-link"
         >
-          Code on GitHub
+          Open source
         </a>
       </p>
     </div>

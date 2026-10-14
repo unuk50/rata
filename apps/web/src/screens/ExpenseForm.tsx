@@ -12,12 +12,21 @@ import {
 import { useMemo, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Avatar, CATEGORIES, CURRENCIES, Header, Tabs, today } from "../lib/ui";
+import {
+  Avatar,
+  CATEGORIES,
+  CURRENCIES,
+  Header,
+  PeoplePicker,
+  TabPanel,
+  Tabs,
+  today,
+} from "../lib/ui";
 
 const METHODS: { id: SplitMethod; label: string }[] = [
-  { id: "equal", label: "Equally" },
-  { id: "exact", label: "Amounts" },
-  { id: "percent", label: "Percent" },
+  { id: "equal", label: "Equal" },
+  { id: "exact", label: "Exact" },
+  { id: "percent", label: "%" },
   { id: "shares", label: "Shares" },
 ];
 
@@ -188,9 +197,12 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     if (!raw) return a;
     return a + (method === "exact" ? (parseAmount(raw, cur) ?? 0) : Number(raw) || 0);
   }, 0);
+  const inCount = members.filter((m) => inSplit[m.mid]).length;
+  const each = preview ? Object.values(preview).find((v) => v > 0) : undefined;
+  const isToday = date === today();
 
   return (
-    <div className="pb-10">
+    <div className="pb-28">
       <Header
         title={existing ? "Edit expense" : "Add expense"}
         back={`/g/${saved.gid}`}
@@ -202,103 +214,64 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
           )
         }
       />
-      <div className="space-y-4">
-        <div>
-          <label className="label" htmlFor="desc">
-            Description
-          </label>
+      <div className="space-y-6">
+        <div className="card flex items-center gap-2 p-3">
+          <select
+            id="cur"
+            className="field w-24 shrink-0 font-extrabold"
+            value={cur}
+            onChange={(e) => setCurrency(e.target.value)}
+            aria-label="Currency"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
           <input
-            id="desc"
-            className="field"
-            placeholder="Dinner, taxi, groceries"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
+            id="amt"
+            className="amount"
+            inputMode="decimal"
+            placeholder="0"
+            aria-label="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
             autoFocus={!existing}
           />
         </div>
-        <div className="flex gap-2">
-          <div className="w-28">
-            <label className="label" htmlFor="cur">
-              Currency
-            </label>
-            <select
-              id="cur"
-              className="field"
-              value={cur}
-              onChange={(e) => setCurrency(e.target.value)}
-            >
-              {CURRENCIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="label" htmlFor="amt">
-              Amount
-            </label>
-            <input
-              id="amt"
-              className="field num text-right text-xl font-extrabold"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="label" htmlFor="date">
-              Date
-            </label>
-            <input
-              id="date"
-              type="date"
-              className="field"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="label" htmlFor="cat">
-              Category
-            </label>
-            <select
-              id="cat"
-              className="field"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <input
+          id="desc"
+          className="field text-lg font-bold"
+          placeholder="What for?"
+          aria-label="Description"
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+        />
 
-        <div>
-          <label className="label" htmlFor="payer">
-            Paid by
-          </label>
-          <select
-            id="payer"
-            className="field"
-            value={payer}
-            onChange={(e) => setPayer(e.target.value)}
-          >
-            {members.map((m) => (
-              <option key={m.mid} value={m.mid}>
-                {m.mid === saved.me ? `${m.name} (you)` : m.name}
-              </option>
-            ))}
-            <option value="*">More than one person</option>
-          </select>
-          {payer === "*" && (
-            <div className="card mt-2 divider">
-              {members.map((m) => (
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="caps">Paid by</h2>
+            <button
+              type="button"
+              className="caps underline"
+              onClick={() => setPayer(payer === "*" ? (saved.me ?? members[0]?.mid ?? "") : "*")}
+            >
+              {payer === "*" ? "One person" : "Several people"}
+            </button>
+          </div>
+          {payer !== "*" ? (
+            <PeoplePicker
+              label="Paid by"
+              people={members}
+              me={saved.me}
+              selected={(mid) => payer === mid}
+              onToggle={setPayer}
+            />
+          ) : (
+            <div className="card divider">
+              {members.map((m, i) => (
                 <div key={m.mid} className="flex items-center gap-3 p-2">
-                  <Avatar name={m.name} />
-                  <span className="flex-1 text-sm">{m.name}</span>
+                  <Avatar name={m.name} i={i} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold">{m.name}</span>
                   <input
                     className="field num w-32 text-right"
                     inputMode="decimal"
@@ -311,73 +284,129 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        <div>
-          <span className="label">Split</span>
-          <div className="mb-2">
-            <Tabs options={METHODS} value={method} onChange={setMethod} />
+        <section>
+          <h2 className="caps mb-2">Split</h2>
+          <div className="mb-3">
+            <Tabs id="split" options={METHODS} value={method} onChange={setMethod} />
           </div>
-          <div className="card divider">
-            {members.map((m) => (
-              <div key={m.mid} className="flex items-center gap-3 p-2">
-                {method === "equal" ? (
-                  <input
-                    type="checkbox"
-                    className="h-5 w-5 accent-accent"
-                    checked={!!inSplit[m.mid]}
-                    onChange={(e) => setInSplit({ ...inSplit, [m.mid]: e.target.checked })}
-                    aria-label={`Include ${m.name}`}
-                  />
-                ) : null}
-                <Avatar name={m.name} />
-                <span className="flex-1 text-sm">{m.name}</span>
-                {method !== "equal" && (
-                  <input
-                    className="field num w-28 text-right"
-                    inputMode="decimal"
-                    placeholder={method === "shares" ? "0" : method === "percent" ? "0 %" : "0.00"}
-                    value={parts[m.mid] ?? ""}
-                    onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
-                    aria-label={`${m.name} ${method}`}
-                  />
+          <TabPanel id="split" value={method}>
+            {method === "equal" ? (
+              <>
+                <PeoplePicker
+                  label="Split between"
+                  people={members}
+                  me={saved.me}
+                  selected={(mid) => !!inSplit[mid]}
+                  onToggle={(mid) => setInSplit({ ...inSplit, [mid]: !inSplit[mid] })}
+                />
+                <p className="caps mt-2">
+                  {inCount === 0
+                    ? "Tap people to split"
+                    : `${inCount} ${inCount === 1 ? "person" : "people"}${each ? ` · ${formatMoney(each, cur)} each` : ""}`}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="card divider">
+                  {members.map((m, i) => (
+                    <div key={m.mid} className="flex items-center gap-3 p-2">
+                      <Avatar name={m.name} i={i} />
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{m.name}</span>
+                      <input
+                        className="field num w-24 text-right"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={parts[m.mid] ?? ""}
+                        onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
+                        aria-label={`${m.name} ${method}`}
+                      />
+                      <span className="num w-20 shrink-0 text-right text-sm text-muted">
+                        {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "0"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {method === "exact" && total !== null && (
+                  <p className={`caps mt-2 ${sumParts === total ? "" : "text-owes"}`}>
+                    {formatMoney(sumParts, cur)} / {formatMoney(total, cur)}
+                  </p>
                 )}
-                <span className="num w-24 text-right text-sm text-muted">
-                  {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "–"}
-                </span>
+                {method === "percent" && (
+                  <p
+                    className={`caps mt-2 ${Math.round(sumParts * 100) === 10000 ? "" : "text-owes"}`}
+                  >
+                    {sumParts}% / 100%
+                  </p>
+                )}
+              </>
+            )}
+          </TabPanel>
+        </section>
+
+        <details
+          className="group"
+          open={!!existing && (!isToday || category !== "General" || !!note)}
+        >
+          <summary className="caps flex cursor-pointer list-none items-center gap-2">
+            <span className="text-fg-2">{isToday ? "Today" : date}</span>·
+            <span className="text-fg-2">{category}</span>
+            {note && <span className="text-fg-2">· Note</span>}
+            <span className="ml-auto underline">More</span>
+          </summary>
+          <div className="mt-3 space-y-3">
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <label className="label" htmlFor="date">
+                  Date
+                </label>
+                <input
+                  id="date"
+                  type="date"
+                  className="field"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
-            ))}
+              <div className="min-w-0 flex-1">
+                <label className="label" htmlFor="cat">
+                  Category
+                </label>
+                <select
+                  id="cat"
+                  className="field"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="label" htmlFor="note">
+                Note
+              </label>
+              <input
+                id="note"
+                className="field"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
           </div>
-          {method === "exact" && total !== null && (
-            <p className={`mt-1 text-xs ${sumParts === total ? "text-muted" : "text-owes"}`}>
-              {formatMoney(sumParts, cur)} of {formatMoney(total, cur)}
-            </p>
-          )}
-          {method === "percent" && (
-            <p
-              className={`mt-1 text-xs ${Math.round(sumParts * 100) === 10000 ? "text-muted" : "text-owes"}`}
-            >
-              {sumParts}% of 100%
-            </p>
-          )}
-        </div>
+        </details>
+      </div>
 
-        <div>
-          <label className="label" htmlFor="note">
-            Note (optional)
-          </label>
-          <input
-            id="note"
-            className="field"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
+        <div className="mx-auto max-w-xl">
+          {error && <p className="mb-2 text-sm text-owes">{error}</p>}
+          <button type="button" className="btn-primary w-full" onClick={save}>
+            Save
+          </button>
         </div>
-
-        {error && <p className="text-sm text-owes">{error}</p>}
-        <button type="button" className="btn-primary w-full" onClick={save}>
-          Save
-        </button>
       </div>
     </div>
   );

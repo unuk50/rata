@@ -60,8 +60,61 @@ export function defaultCurrency(): string {
 }
 
 export function Money({ v, c, signed }: { v: number; c: string; signed?: boolean }) {
-  const cls = signed ? (v > 0 ? "text-owed" : v < 0 ? "text-owes" : "text-muted") : "";
-  return <span className={`num ${cls}`}>{formatMoney(signed ? Math.abs(v) : v, c)}</span>;
+  if (!signed) return <span className="num">{formatMoney(v, c)}</span>;
+  const cls = v > 0 ? "text-owed" : v < 0 ? "text-owes" : "text-muted";
+  const sign = v > 0 ? "+" : v < 0 ? "\u2212" : "";
+  return (
+    <span className={`num ${cls}`}>
+      {sign}
+      {formatMoney(Math.abs(v), c)}
+    </span>
+  );
+}
+
+const ICONS = {
+  back: "M15 18l-6-6 6-6",
+  gear: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z",
+  invite:
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6",
+  lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+  copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  check: "M20 6L9 17l-5-5",
+  arrow: "M5 12h14M13 6l6 6-6 6",
+  plus: "M12 5v14M5 12h14",
+  x: "M18 6L6 18M6 6l12 12",
+} as const;
+
+export function Icon({ name, size = 20 }: { name: keyof typeof ICONS; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="square"
+      aria-hidden="true"
+    >
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
+export function IconButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: keyof typeof ICONS;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className="btn-icon" onClick={onClick} aria-label={label} title={label}>
+      <Icon name={icon} />
+    </button>
+  );
 }
 
 export function Header({
@@ -74,26 +127,11 @@ export function Header({
   right?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-10 -mx-4 mb-5 flex items-center gap-2 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur">
-      {back !== undefined && (
-        <button
-          type="button"
-          className="btn-ghost -ml-2 px-2"
-          onClick={() => go(back)}
-          aria-label="Back"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
+    <header className="sticky top-0 z-10 -mx-4 mb-5 flex items-center gap-1 border-b border-line bg-ink/90 px-2 py-1.5 backdrop-blur">
+      {back !== undefined ? (
+        <IconButton icon="back" label="Back" onClick={() => go(back)} />
+      ) : (
+        <span className="w-2" />
       )}
       <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight">{title}</h1>
       {right}
@@ -105,36 +143,93 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   const map: Record<SyncStatus, [string, string]> = {
     loading: ["bg-faint", "Loading"],
     syncing: ["bg-warn", "Syncing"],
-    live: ["bg-owed", "Live"],
+    live: ["bg-owed", "Synced"],
     offline: ["bg-faint", "Offline"],
   };
   const [color, label] = map[status];
+  const showText = status === "offline" || pending > 0;
   return (
     <span
-      className="caps flex items-center gap-1.5"
+      className="caps flex items-center gap-1.5 px-1"
       title={pending ? `${pending} change(s) waiting to send` : label}
     >
       <span className={`h-2 w-2 ${color}`} />
-      {label}
-      {pending > 0 && ` · ${pending}`}
+      {showText ? (
+        <span>
+          {label}
+          {pending > 0 && ` · ${pending}`}
+        </span>
+      ) : (
+        <span className="sr-only">{label}</span>
+      )}
     </span>
   );
 }
 
-export function Avatar({ name }: { name: string }) {
-  const hue = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+const HUES = [24, 200, 280, 140, 340, 52, 170, 232, 0, 100];
+
+/** Colour by position in the group, so people in one group never share a colour. */
+export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
+  const hue = HUES[(i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0)) % HUES.length] ?? 0;
   return (
     <span
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center border text-sm font-extrabold"
+      className={`inline-flex shrink-0 items-center justify-center border font-extrabold ${big ? "h-12 w-12 text-lg" : "h-9 w-9 text-sm"}`}
       style={{
         background: `hsl(${hue} 60% 14%)`,
-        borderColor: `hsl(${hue} 70% 45%)`,
+        borderColor: `hsl(${hue} 70% 50%)`,
         color: `hsl(${hue} 90% 80%)`,
       }}
       aria-hidden="true"
     >
       {name.trim().charAt(0).toUpperCase() || "?"}
     </span>
+  );
+}
+
+export interface Person {
+  mid: string;
+  name: string;
+}
+
+/** A row of people to tap. Selected tiles get the accent edge. */
+export function PeoplePicker({
+  people,
+  selected,
+  onToggle,
+  me,
+  label,
+  indexOf,
+}: {
+  people: Person[];
+  indexOf?: (mid: string) => number;
+  selected: (mid: string) => boolean;
+  onToggle: (mid: string) => void;
+  me?: string;
+  label: string;
+}) {
+  return (
+    <fieldset className="-mx-4 overflow-x-auto px-4 pb-1">
+      <legend className="sr-only">{label}</legend>
+      <div className="flex w-max gap-2">
+        {people.map((p, i) => {
+          const on = selected(p.mid);
+          return (
+            <button
+              key={p.mid}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onToggle(p.mid)}
+              className={on ? "person person-on" : "person"}
+            >
+              <Avatar name={p.name} i={indexOf ? indexOf(p.mid) : i} big />
+              <span className="w-16 truncate text-center text-xs font-bold">
+                {p.mid === me ? "You" : p.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -159,17 +254,19 @@ export const CATEGORIES = [
 ];
 
 export const KINDS = [
-  { id: "trip", label: "Trip", hint: "Travel with friends or family" },
-  { id: "home", label: "Home", hint: "Rent, bills, groceries" },
-  { id: "party", label: "Party", hint: "One evening, many guests" },
-  { id: "other", label: "Other", hint: "Anything else" },
+  { id: "trip", label: "Trip", emoji: "\u2708\ufe0f" },
+  { id: "home", label: "Home", emoji: "\ud83c\udfe0" },
+  { id: "party", label: "Party", emoji: "\ud83c\udf89" },
+  { id: "other", label: "Other", emoji: "\u2728" },
 ] as const;
 
 export function Tabs<T extends string>({
+  id,
   options,
   value,
   onChange,
 }: {
+  id: string;
   options: readonly { id: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
@@ -183,15 +280,33 @@ export function Tabs<T extends string>({
       {options.map((o) => (
         <button
           key={o.id}
+          id={`${id}-tab-${o.id}`}
           type="button"
           role="tab"
           aria-selected={value === o.id}
+          aria-controls={`${id}-panel`}
           onClick={() => onChange(o.id)}
           className={value === o.id ? "tab tab-on" : "tab"}
         >
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function TabPanel({
+  id,
+  value,
+  children,
+}: {
+  id: string;
+  value: string;
+  children: ReactNode;
+}) {
+  return (
+    <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${value}`}>
+      {children}
     </div>
   );
 }

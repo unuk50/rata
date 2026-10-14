@@ -2,7 +2,7 @@ import { decodeInvite, newId } from "@rata/core";
 import { useEffect, useMemo, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { storage } from "../lib/storage";
-import { Avatar, Header } from "../lib/ui";
+import { Avatar, Header, Icon } from "../lib/ui";
 
 export function Join({ code }: { code: string }) {
   const secret = useMemo(() => decodeInvite(code), [code]);
@@ -50,18 +50,22 @@ export function Join({ code }: { code: string }) {
     <div>
       <Header title={state.group ? `Join ${state.group.name}` : "Join group"} back="/" />
       {loading ? (
-        <p className="text-muted">Opening the group…</p>
+        <p className="text-muted">Opening…</p>
       ) : !state.group ? (
         <p>This group is empty or the link is wrong.</p>
       ) : (
         <div className="space-y-5">
           <div>
-            <h2 className="caps mb-2">Who are you?</h2>
+            <h2 className="caps mb-2">Tap your name</h2>
             <ul className="card divider">
-              {state.members.map((m) => (
+              {state.members.map((m, i) => (
                 <li key={m.mid}>
                   <button type="button" className="row hover:bg-raised" onClick={() => pick(m.mid)}>
-                    <Avatar name={m.name} /> {m.name}
+                    <Avatar name={m.name} i={i} />
+                    <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
+                    <span className="text-muted">
+                      <Icon name="arrow" />
+                    </span>
                   </button>
                 </li>
               ))}
@@ -69,12 +73,12 @@ export function Join({ code }: { code: string }) {
           </div>
           <div className="card space-y-2 p-4">
             <label className="label" htmlFor="newname">
-              Not in the list? Add yourself
+              Not listed? Add yourself
             </label>
             <div className="flex gap-2">
               <input
                 id="newname"
-                className="field"
+                className="field min-w-0"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"

@@ -2,7 +2,7 @@ import { formatMoney, type GroupSecret, newId, owedShares, toMajor } from "@rata
 import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { type SavedGroup, storage } from "../lib/storage";
-import { Avatar, Header } from "../lib/ui";
+import { Avatar, Header, Icon } from "../lib/ui";
 
 export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
   const { state, sync } = useGroup(saved);
@@ -108,56 +108,56 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
           <label className="label" htmlFor="gname">
             Group name
           </label>
-          <div className="flex gap-2">
-            <input
-              id="gname"
-              className="field"
-              value={gname}
-              onChange={(e) => setGname(e.target.value)}
-            />
-            <button type="button" className="btn-secondary" onClick={rename}>
-              Save
-            </button>
-          </div>
-          <p className="text-sm text-muted">
-            Main currency {g?.currency} · Total spent{" "}
+          <input
+            id="gname"
+            className="field text-lg font-bold"
+            value={gname}
+            onChange={(e) => setGname(e.target.value)}
+            onBlur={() => {
+              if (gname.trim() && gname.trim() !== g?.name) void rename();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+          />
+          <p className="caps">
+            {g?.currency} ·{" "}
             {Object.entries(total)
               .map(([c, v]) => formatMoney(v, c))
-              .join(" + ") || "none"}
+              .join(" + ") || "Nothing spent"}
           </p>
         </section>
         <section>
           <h2 className="caps mb-2">People</h2>
           <ul className="card divider">
-            {state.members.map((m) => (
-              <li key={m.mid} className="flex items-center gap-3 p-3">
-                <Avatar name={m.name} />
-                {m.name}
-                {m.mid === saved.me && <span className="text-faint">(you)</span>}
+            {state.members.map((m, i) => (
+              <li key={m.mid} className="row">
+                <Avatar name={m.name} i={i} />
+                <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
+                {m.mid === saved.me && <span className="caps">You</span>}
               </li>
             ))}
           </ul>
           <div className="mt-2 flex gap-2">
             <input
-              className="field"
+              className="field min-w-0"
               placeholder="Add a person"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               aria-label="New person name"
             />
-            <button type="button" className="btn-secondary" onClick={addMember}>
-              Add
+            <button
+              type="button"
+              className="btn-secondary"
+              aria-label="Add person"
+              disabled={!newName.trim()}
+              onClick={addMember}
+            >
+              <Icon name="plus" size={18} />
             </button>
           </div>
         </section>
         <section className="space-y-2">
-          <button
-            type="button"
-            className="btn-secondary w-full"
-            onClick={() => go(`/g/${saved.gid}/invite`)}
-          >
-            Invite link
-          </button>
           <button type="button" className="btn-secondary w-full" onClick={exportCsv}>
             Export CSV
           </button>
