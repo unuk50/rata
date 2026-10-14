@@ -150,6 +150,37 @@ const waitInvite = () => page.getByRole("button", { name: /share link/i }).waitF
 const waitSettle = () => page.getByRole("button", { name: /save payment/i }).waitFor();
 const SYNCED = /^(Live|Synced)$/;
 
+/** The invite-link box on Home may sit behind a "Have an invite link?" button. */
+async function inviteBox() {
+  const box = page.getByLabel(/invite link/i);
+  if (!(await box.isVisible())) await page.getByRole("button", { name: /invite link\?/i }).click();
+  return box;
+}
+
+/** The "add yourself" name field on Join may sit behind a "Not listed? Add yourself" button. */
+async function addSelfField() {
+  const old = page.getByLabel(/Add yourself/i);
+  if (await old.count()) return old;
+  await page.getByRole("button", { name: /add yourself/i }).click();
+  return page.getByLabel(/^Your name$/i);
+}
+
+/** A settle-plan button: "Mark paid: A to B" (new) or "A paid B" / "Record" (older designs). */
+const markPaid = () => page.getByRole("button", { name: /^Mark paid|^Record$|^.+ paid .+$/ });
+
+/**
+ * Settle up opens the payment form when you owe someone, otherwise the Balances tab.
+ * Returns true when the payment form opened.
+ */
+async function openSettle() {
+  await page.getByRole("button", { name: /settle up/i }).click();
+  return page
+    .getByRole("button", { name: /save payment/i })
+    .waitFor({ timeout: 2500 })
+    .then(() => true)
+    .catch(() => false);
+}
+
 /** Date, category and note may sit behind a "More" disclosure. */
 async function openMore() {
   if (await page.getByLabel("Category").isVisible()) return;
@@ -236,7 +267,7 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
       const text = li.innerText;
       const btnLabel = [...li.querySelectorAll("button")]
         .map((b) => b.getAttribute("aria-label") || "")
-        .find((l) => /^.+ paid .+$/.test(l));
+        .find((l) => /^Mark paid: .+ to .+$|^.+ paid .+$/.test(l));
       return { text, btnLabel: btnLabel ?? null };
     }),
   );
@@ -310,7 +341,14 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
     let to;
     let candidates;
     if (it.btnLabel) {
-      [from, to] = it.btnLabel.split(" paid ");
+      const m = new RegExp(`^(?:Mark paid: )?(${nameAlt}) (?:paid|to) (${nameAlt})$`).exec(
+        it.btnLabel,
+      );
+      if (!m) {
+        result.mismatches.push(`plan button not understood: "${it.btnLabel}"`);
+        continue;
+      }
+      [, from, to] = m;
       candidates = it.text.split("\n");
     } else {
       const line = it.text.split("\n")[0];
@@ -451,7 +489,7 @@ async function main() {
   journey = "join";
   await step("invalid-links", async () => {
     await goto("/");
-    await page.getByLabel(/invite link/i).fill("https://rata.example/hello");
+    await (await inviteBox()).fill("https://rata.example/hello");
     await btn("Join").click();
     await shot(
       "home-invalid-link",
@@ -477,7 +515,7 @@ async function main() {
   });
   await step("join-paste", async () => {
     await goto("/");
-    await page.getByLabel(/invite link/i).fill(G.flat.invite);
+    await (await inviteBox()).fill(G.flat.invite);
     await btn("Join").click();
     await waitJoin();
     await settle(800);
@@ -510,10 +548,10 @@ async function main() {
     await goto(inviteHash(g));
     await waitJoin();
     await settle(500);
-    await page.getByLabel(/Add yourself/i).fill("Dev");
+    await (await addSelfField()).fill("Dev");
     await shot(
       "join-add-self",
-      "Join screen for an 8-person party, typing a new name in 'Not in the list? Add yourself'.",
+      "Join screen for an 8-person party, typing a new name after 'Not listed? Add yourself'.",
       { fullPage: true },
     );
     await page.getByRole("button", { name: "Join", exact: true }).click();
@@ -897,13 +935,13 @@ async function main() {
       "Goa balances after the edit and delete, with suggested payments.",
       { fullPage: true },
     );
-    await page
-      .getByRole("button", { name: /^Record$|^.+ paid .+$/ })
-      .first()
-      .click();
+    await markPaid().first().click();
     await waitSettle();
     await settle(500);
-    await shot("record-prefilled", "Record a payment, prefilled from the first suggested payment.");
+    await shot(
+      "record-prefilled",
+      "Record a payment, prefilled from the first suggested payment (Mark paid).",
+    );
     await press(btn("Save payment"), "Save payment");
     await waitGroup();
     await settle(500);
@@ -915,13 +953,19 @@ async function main() {
   });
   await step("blank-form", async () => {
     await openGroup(G.lonavala.name);
-    await page.getByRole("button", { name: /settle up/i }).click();
-    await waitSettle();
+    const obs = [];
+    if (!(await openSettle())) {
+      // Newer design: with nothing to pay, Settle up shows Balances. The blank form has no button.
+      obs.push(
+        "Settle up on a settled group opens the Balances tab, not a form; this blank form was opened by its URL (#/g/<id>/settle).",
+      );
+      await goto(`/g/${G.lonavala.gid}/settle`);
+      await waitSettle();
+    }
     await settle(500);
     const cur = await page.getByLabel("Currency").inputValue();
-    await shot("blank-form", "Settle up button on a settled INR group: empty payment form.", {
-      obs: cur !== "INR" ? [`Currency defaults to ${cur}, not the group currency INR.`] : [],
-    });
+    if (cur !== "INR") obs.push(`Currency defaults to ${cur}, not the group currency INR.`);
+    await shot("blank-form", "Empty payment form on a settled INR group.", { obs });
     await press(btn("Save payment"), "Save payment");
     await shot("error-no-amount", "Save payment with no amount.");
     await pickPerson("from", "Kabir", G.lonavala.me);
@@ -1092,8 +1136,11 @@ async function main() {
     await choice(/^(Percent|%)$/).click();
     await shot("add-expense", "Add expense form in dark mode (percent split).", { fullPage: true });
     await page.getByRole("button", { name: "Back" }).click();
-    await page.getByRole("button", { name: /settle up/i }).click();
-    await waitSettle();
+    await waitGroup();
+    if (!(await openSettle())) {
+      await markPaid().first().click();
+      await waitSettle();
+    }
     await shot("settle", "Record a payment in dark mode.");
     await page.getByRole("button", { name: "Back" }).click();
     await page.getByRole("button", { name: /group settings/i }).click();
@@ -1148,6 +1195,62 @@ async function main() {
       page = prev;
       await ctx2.close();
     }
+  });
+
+  // ---------------------------------------------------------------- 11. screens added later
+  // New in later designs; kept at the end so the numbers above match earlier rounds.
+  journey = "extra";
+  await step("settle-up-no-debt", async () => {
+    await openGroup(G.lonavala.name);
+    const hero = await page.locator("main").innerText();
+    const opened = await openSettle();
+    await settle(400);
+    await shot(
+      "settle-up-no-debt",
+      "Lonavala (you owe nobody, one payment open between others): what Settle up opens.",
+      {
+        obs: [
+          opened
+            ? "Settle up opened the payment form."
+            : "Settle up opened the Balances tab (you have nothing to pay).",
+          ...(/payments? open/i.test(hero)
+            ? ["Hero shows 'You're square' with payments open."]
+            : []),
+        ],
+      },
+    );
+  });
+  await step("payment-edit-delete", async () => {
+    await openGroup(G.goa.name);
+    await page.getByRole("tabpanel").getByText("Paid", { exact: true }).first().click();
+    await page.getByRole("button", { name: /save payment/i }).waitFor();
+    await settle(500);
+    const route = await page.evaluate(() => location.hash);
+    await page.getByLabel("Amount").fill("1000");
+    await shot(
+      "payment-edit",
+      "Edit payment (#/g/<id>/p/<pid>) opened from a payment row, amount changed to ₹1,000; Delete in the header.",
+    );
+    await press(btn("Save payment"), "Save payment");
+    await waitGroup();
+    await settle(500);
+    await shot("after-payment-edit", "Goa list after editing the payment.");
+    await goto(route.replace(/^#/, ""));
+    await page.getByRole("button", { name: /save payment/i }).waitFor();
+    await settle(400);
+    const before = dialogs.length;
+    await btn("Delete").click();
+    await waitGroup();
+    await settle(500);
+    await shot("after-payment-delete", "Goa list after deleting that payment.", {
+      obs:
+        dialogs.length > before
+          ? [`Confirm dialog text: "${dialogs[dialogs.length - 1]}" (native dialog).`]
+          : [],
+    });
+    await goto(route.replace(/^#/, ""));
+    await settle(800);
+    await shot("deleted-payment-url", "Opening the link of a deleted payment.");
   });
 
   if (consoleErrors.length)
