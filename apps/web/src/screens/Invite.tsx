@@ -24,10 +24,11 @@ function Qr({ text }: { text: string }) {
     };
   }, [text]);
   return (
-    <div className="mx-auto aspect-square w-60 bg-white p-3">
+    <div className="mx-auto aspect-square w-60 bg-white">
       {path && (
         <svg
-          viewBox={`0 0 ${path.n} ${path.n}`}
+          // Four white modules on each side: the quiet zone scanners need.
+          viewBox={`-4 -4 ${path.n + 8} ${path.n + 8}`}
           className="h-full w-full"
           role="img"
           aria-label="Invite QR code"

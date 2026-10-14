@@ -52,6 +52,7 @@ export function Settle({
   const save = async () => {
     const v = parseAmount(amount, cur);
     if (!v || v <= 0) return setError("Enter an amount.");
+    if (!toId) return setError("Add someone to pay first.");
     if (from === toId) return setError("Pick two different people.");
     await sync?.add([
       {

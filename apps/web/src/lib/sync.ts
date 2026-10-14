@@ -186,7 +186,9 @@ export class GroupSync {
       await this.pull();
       if (this.queue.length === 0 && Object.keys(this.cache.events).length === 0) {
         this.scheduleReconnect();
-        return this.setStatus("empty");
+        // Offline mid-pull: keep the offline status, the link may be fine.
+        if (navigator.onLine) this.setStatus("empty");
+        return;
       }
       const token = await this.token;
       if (this.closed) return;

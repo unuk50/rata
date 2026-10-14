@@ -176,7 +176,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
           Object.entries(ps).map(([k, v]) => [
             k,
             m === "exact"
-              ? amountInput(v, existing.currency)
+              ? reAmount(amountInput(v, existing.currency), existing.currency, cur)
               : m === "percent"
                 ? String(v / 100)
                 : String(v),
@@ -274,8 +274,13 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             className="field w-24 shrink-0 font-extrabold"
             value={cur}
             onChange={(e) => {
-              setAmount(reAmount(amount, cur, e.target.value));
-              setCurrency(e.target.value);
+              const to = e.target.value;
+              const conv = (vals: Record<string, string>) =>
+                Object.fromEntries(Object.entries(vals).map(([k, v]) => [k, reAmount(v, cur, to)]));
+              setAmount(reAmount(amount, cur, to));
+              setMultiPay(conv(multiPay));
+              if (method === "exact") setParts(conv(parts));
+              setCurrency(to);
             }}
             aria-label="Currency"
           >

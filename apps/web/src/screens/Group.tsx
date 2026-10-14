@@ -323,7 +323,11 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                   setTab("balances");
                   setTimeout(
                     () =>
-                      document.getElementById("settle-up")?.scrollIntoView({ behavior: "smooth" }),
+                      document.getElementById("settle-up")?.scrollIntoView({
+                        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+                          ? "auto"
+                          : "smooth",
+                      }),
                     50,
                   );
                 }}
