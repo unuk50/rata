@@ -134,15 +134,21 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
               if (e.key === "Enter") e.currentTarget.blur();
             }}
           />
-          <p className="meta">
-            {Object.keys(total).length
-              ? `Total spent: ${Object.entries(total)
-                  .map(([c, v]) => formatMoney(v, c))
-                  .join(" + ")}`
-              : "Nothing spent yet"}{" "}
-            · Main currency {g?.currency}
-          </p>
         </section>
+        <dl className="-mx-4">
+          <div className="row">
+            <dt className="flex-1 text-muted">Total spent</dt>
+            <dd className="num min-w-0 text-right font-bold">
+              {Object.keys(total).length
+                ? Object.entries(total).map(([c, v]) => <div key={c}>{formatMoney(v, c)}</div>)
+                : formatMoney(0, g?.currency ?? "INR")}
+            </dd>
+          </div>
+          <div className="row">
+            <dt className="flex-1 text-muted">Main currency</dt>
+            <dd className="font-bold">{g?.currency}</dd>
+          </div>
+        </dl>
         <section>
           <h2 className="meta mb-2">People</h2>
           <ul className="-mx-4">

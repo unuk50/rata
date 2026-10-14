@@ -27,7 +27,7 @@ import {
   TabPanel,
   Tabs,
   today,
-  zero,
+  ZERO,
 } from "../lib/ui";
 
 const METHODS: { id: SplitMethod; label: string }[] = [
@@ -377,7 +377,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                   <input
                     className="field num w-32 text-right"
                     inputMode="decimal"
-                    placeholder={zero(cur)}
+                    placeholder={ZERO}
                     value={multiPay[m.mid] ?? ""}
                     onChange={(e) => setMultiPay({ ...multiPay, [m.mid]: e.target.value })}
                     aria-label={`${m.name} paid`}
@@ -427,7 +427,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                       <input
                         className="field num w-24 text-right"
                         inputMode="decimal"
-                        placeholder={method === "exact" ? zero(cur) : "0"}
+                        placeholder={ZERO}
                         value={parts[m.mid] ?? ""}
                         onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
                         aria-label={`${m.name} ${method}`}

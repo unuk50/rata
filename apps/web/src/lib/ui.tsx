@@ -71,10 +71,8 @@ export function currencySymbol(cur: string): string {
   }
 }
 
-/** Placeholder for an amount field: 0.00, or 0 for currencies without minor units. */
-export function zero(_cur: string): string {
-  return "0";
-}
+/** Placeholder for an amount field. Whole amounts show no minor units, so it is "0" for all currencies. */
+export const ZERO = "0";
 
 /**
  * An amount. `signed` adds + or − and the owed/owes colour.
@@ -479,14 +477,14 @@ export function AmountField({
           className="amount invisible col-start-1 row-start-1 whitespace-pre"
           aria-hidden="true"
         >
-          {value || zero(cur)}
+          {value || ZERO}
         </span>
         <input
           id={id}
           className="amount col-start-1 row-start-1 w-full"
           size={1}
           inputMode="decimal"
-          placeholder={zero(cur)}
+          placeholder={ZERO}
           aria-label="Amount"
           value={value}
           onChange={(e) => onChange(e.target.value)}

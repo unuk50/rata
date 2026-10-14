@@ -15,13 +15,13 @@ export interface SavedGroup extends GroupSecret {
 /** Number of avatar colours (HUES in ui.tsx). */
 export const COLOURS = 10;
 
-/** The first free colour, starting from a hash of the id, so a new group does not repeat one. */
-function pickColour(id: string, used: Set<number>): number {
-  let n = 0x811c9dc5;
-  for (const c of id) n = Math.imul(n ^ c.charCodeAt(0), 0x01000193);
-  let i = (n >>> 0) % COLOURS;
-  for (let k = 0; k < COLOURS && used.has(i); k++) i = (i + 1) % COLOURS;
-  return i;
+/**
+ * The first free colour. The palette order spreads the hues, so the first groups get colours far
+ * apart and slate grey comes last.
+ */
+function pickColour(used: Set<number>): number {
+  for (let i = 0; i < COLOURS; i++) if (!used.has(i)) return i;
+  return used.size % COLOURS;
 }
 
 /** Give a colour to each group that has none, in the order they were added. Others keep theirs. */
@@ -32,7 +32,7 @@ function withColours(all: SavedGroup[]): { list: SavedGroup[]; changed: boolean 
     .sort((a, b) => a.addedAt - b.addedAt)
     .map((g) => {
       if (g.colour !== undefined) return g;
-      const colour = pickColour(g.gid, used);
+      const colour = pickColour(used);
       used.add(colour);
       changed = true;
       return { ...g, colour };

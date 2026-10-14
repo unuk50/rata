@@ -45,6 +45,17 @@ function showMark(items: { date: string }[], i: number) {
   return mark === "Today" || mark === "Yesterday";
 }
 
+/**
+ * A small gap where the day changes, after a day with a marker or with two or more rows. A list of
+ * single-row days keeps the plain 64 px rhythm.
+ */
+function gapBefore(items: { date: string }[], i: number) {
+  const prev = items[i - 1]?.date;
+  if (!prev || prev === items[i]?.date || showMark(items, i)) return false;
+  const mark = dayMark(prev);
+  return mark === "Today" || mark === "Yesterday" || items[i - 2]?.date === prev;
+}
+
 /** " · Sun 11" for rows not under a Today or Yesterday marker. */
 function daySuffix(date: string) {
   const mark = dayMark(date);
@@ -257,12 +268,12 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                             <li key={`d-${row.date}`} className="day-mark" aria-hidden="true">
                               {dayMark(row.date)}
                             </li>
-                          ) : i > 0 && d.items[i - 1]?.date !== row.date ? (
-                            // A small gap where the day changes keeps the rhythm of days.
-                            <li key={`g-${row.date}`} className="h-3" aria-hidden="true" />
                           ) : null,
                           row.kind === "e" ? (
-                            <li key={row.e.eid}>
+                            <li
+                              key={row.e.eid}
+                              className={gapBefore(d.items, i) ? "mt-3" : undefined}
+                            >
                               <button
                                 type="button"
                                 className="row press active:bg-panel"
@@ -281,7 +292,10 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                               </button>
                             </li>
                           ) : (
-                            <li key={row.p.pid}>
+                            <li
+                              key={row.p.pid}
+                              className={gapBefore(d.items, i) ? "mt-3" : undefined}
+                            >
                               <button
                                 type="button"
                                 className="row press active:bg-panel"
