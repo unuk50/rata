@@ -313,7 +313,7 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
   const meExp = Object.entries(expectedByName[me] ?? {}).filter(([, v]) => v);
   const card = await page
     .getByText(
-      /^\s*(Your balance|You're owed|You owe|All settled|You're settled|Settled|You're square|You are square)\b/i,
+      /^\s*(Your balance|You're owed|You owe|All settled|You're settled|Settled|You're square|You are square|Per currency)\b/i,
     )
     .first()
     .locator("xpath=..")
@@ -1232,7 +1232,11 @@ async function main() {
   });
   await step("payment-edit-delete", async () => {
     await openGroup(G.goa.name);
-    await page.getByRole("tabpanel").getByText("Paid", { exact: true }).first().click();
+    await page
+      .getByRole("tabpanel")
+      .getByText(/^(paid|payment)$/i)
+      .first()
+      .click();
     await page.getByRole("button", { name: /save payment/i }).waitFor();
     await settle(500);
     const route = await page.evaluate(() => location.hash);
