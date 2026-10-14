@@ -274,13 +274,15 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
   // Your-balance card (label differs by design).
   const meExp = Object.entries(expectedByName[me] ?? {}).filter(([, v]) => v);
   const card = await page
-    .getByText(/^(Your balance|You're owed|You owe|All settled)$/)
+    .getByText(
+      /^\s*(Your balance|You're owed|You owe|All settled|You're square|You are square)\s*$/i,
+    )
     .first()
     .locator("xpath=..")
     .innerText()
     .catch(() => "");
   if (meExp.length === 0) {
-    if (!/settled/i.test(card))
+    if (!/settled|square/i.test(card))
       result.mismatches.push(`Your balance: expected settled, got "${card}"`);
   } else
     for (const [cur, v] of meExp) {
@@ -326,7 +328,11 @@ async function checkBalances(g, expectedByName, label, { me = g.me, currencyMode
     for (const c of candidates.map((x) => x.trim()).filter((x) => /\d/.test(x)))
       for (const cur of curs) {
         if (matched) break;
-        const num = Math.round(Number(c.replace(/[^\d.]/g, "")) * 100);
+        const digits = new Intl.NumberFormat("en", {
+          style: "currency",
+          currency: cur,
+        }).resolvedOptions().maximumFractionDigits;
+        const num = Math.round(Number(c.replace(/[^\d.]/g, "")) * 10 ** digits);
         if ((await fmt(num, cur)) === c) {
           const k = currencyMode === "per" ? cur : "*";
           left[k] ??= {};
@@ -1056,15 +1062,18 @@ async function main() {
     await page.reload();
     await settle(800);
     await ctx.setOffline(true);
-    // A group that was never opened on this device.
-    const code = `${"C".repeat(21)}q.${"D".repeat(42)}r`;
-    await goto(`/join/${code}`);
-    await settle(1500);
-    await shot(
-      "join-offline",
-      "Opening an invite link while offline for a group not yet on this device.",
-    );
-    await ctx.setOffline(false);
+    try {
+      // A group that was never opened on this device.
+      const code = `${"C".repeat(21)}q.${"D".repeat(42)}r`;
+      await goto(`/join/${code}`);
+      await settle(1500);
+      await shot(
+        "join-offline",
+        "Opening an invite link while offline for a group not yet on this device.",
+      );
+    } finally {
+      await ctx.setOffline(false);
+    }
     await settle(1500);
   });
 
@@ -1107,35 +1116,38 @@ async function main() {
       locale: "en-IN",
       timezoneId: "Asia/Kolkata",
     });
-    const p2 = await ctx2.newPage();
-    await p2.goto(`${BASE}/${inviteHash(G.lonavala).replace(/^\//, "#/")}`);
-    await waitJoin(p2);
-    await p2.getByRole("button", { name: "Aarav", exact: true }).click();
-    await p2
-      .getByRole("tab", { name: "Expenses" })
-      .or(p2.getByRole("button", { name: "Expenses" }))
-      .first()
-      .waitFor();
-    await p2.evaluate(() => navigator.serviceWorker?.ready);
-    await p2.reload();
-    await p2.waitForTimeout(1500);
-    await ctx2.setOffline(true);
-    let reloaded = true;
-    await p2.reload().catch(() => {
-      reloaded = false;
-    });
-    await p2.waitForTimeout(2000);
     const prev = page;
-    page = p2;
-    await shot(
-      "offline-reload",
-      "Fresh device with the service worker installed, page reloaded with no network.",
-      {
-        obs: reloaded ? [] : ["Reload failed while offline (no cached app shell)."],
-      },
-    );
-    page = prev;
-    await ctx2.close();
+    try {
+      const p2 = await ctx2.newPage();
+      await p2.goto(`${BASE}/${inviteHash(G.lonavala).replace(/^\//, "#/")}`);
+      await waitJoin(p2);
+      await p2.getByRole("button", { name: "Aarav", exact: true }).click();
+      await p2
+        .getByRole("tab", { name: "Expenses" })
+        .or(p2.getByRole("button", { name: "Expenses" }))
+        .first()
+        .waitFor();
+      await p2.evaluate(() => navigator.serviceWorker?.ready);
+      await p2.reload();
+      await p2.waitForTimeout(1500);
+      await ctx2.setOffline(true);
+      let reloaded = true;
+      await p2.reload().catch(() => {
+        reloaded = false;
+      });
+      await p2.waitForTimeout(2000);
+      page = p2;
+      await shot(
+        "offline-reload",
+        "Fresh device with the service worker installed, page reloaded with no network.",
+        {
+          obs: reloaded ? [] : ["Reload failed while offline (no cached app shell)."],
+        },
+      );
+    } finally {
+      page = prev;
+      await ctx2.close();
+    }
   });
 
   if (consoleErrors.length)
