@@ -10,7 +10,8 @@ We are fed up with basic tools that charge money for barebones, average features
 
 - Groups for a trip, a home, a party or anything else
 - Invite link: people join with one tap, no account and no password
-- Expenses in any currency, with split equally, by amounts, by percent or by shares
+- India first: INR by default, and pay with Google Pay or another UPI app (planned, [#11](https://github.com/unuk50/rata/issues/11))
+- Expenses in INR or any other currency for trips, with split equally, by amounts, by percent or by shares
 - More than one payer for one expense
 - Balances, the fewest payments to settle, and payment records
 - Conversion at daily ECB reference rates when a group uses more than one currency

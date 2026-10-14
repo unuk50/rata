@@ -24,7 +24,7 @@ Basic tools charge money for barebones, average features: a daily limit on expen
 ## Principles
 
 1. **Private by design.** The device encrypts each value before sync. The server cannot read amounts, names or notes. No vendor can sell or train on them.
-2. **Global from day one.** Any currency, any country. Region-specific items (bank statement parsers, price sources, payment links) are plugins.
+2. **India first.** INR is the default. People settle with UPI: setup asks for a UPI ID, and "Pay" opens Google Pay or another UPI app ([#11](https://github.com/unuk50/rata/issues/11)). A trip abroad can still use other currencies. Region-specific items (bank statement parsers, price sources, payment links) stay plugins, so other countries can come later.
 3. **Device first.** The app works offline and is fast. Sync runs in the background.
 4. **Zero running cost.** Rata runs on free plans. A family can host its own copy for free.
 5. **Zero daily work.** No servers to patch, no manual deploys. A merge to `main` deploys.
