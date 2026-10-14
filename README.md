@@ -49,7 +49,14 @@ For live reload on the web app, run `pnpm --filter @rata/web dev` too and open h
 
 ## Deploy your own
 
-Rata runs on the Cloudflare free plan. Add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as repository secrets, and each push to `main` deploys. Or run `pnpm deploy` after `npx wrangler login`.
+Rata runs on the Cloudflare free plan.
+
+1. Fork this repo.
+2. In the Cloudflare dashboard, open Compute → Workers & Pages → Create application, and import your fork from GitHub.
+3. Build command: `pnpm install --frozen-lockfile && pnpm --filter @rata/web build`
+4. Deploy command: `pnpm --filter @rata/sync exec wrangler deploy`
+
+Each push to `main` then deploys. Each install has its own storage and shares nothing with other installs. Please use a different name for your install (see [TRADEMARK.md](TRADEMARK.md)).
 
 ## Contribute
 
