@@ -13,6 +13,7 @@ import { go, useGroup, useRates } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
 import {
   Avatar,
+  CATEGORY_EMOJI,
   Header,
   Icon,
   IconButton,
@@ -72,7 +73,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   const allNeg = myNets.length > 0 && myNets.every(([, v]) => v < 0);
   const empty = state.expenses.length === 0 && state.payments.length === 0;
   const heroLabel = empty
-    ? "No expenses yet"
+    ? "Nothing spent yet"
     : myNets.length === 0
       ? plan.length === 0
         ? "All settled"
@@ -81,16 +82,8 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
         ? "You're owed"
         : allNeg
           ? "You owe"
-          : perCurrency
-            ? "Per currency"
-            : "Your balance";
+          : "Your balance";
   const settled = !empty && myNets.length === 0 && plan.length === 0;
-  const edge =
-    allPos || settled
-      ? "var(--color-owed)"
-      : allNeg
-        ? "var(--color-owes)"
-        : "var(--color-line-strong)";
 
   const settleLink = (t: Transfer) =>
     `/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`;
@@ -100,8 +93,11 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   const myDebts = plan.filter((t) => t.from === me).sort(byCur);
   const myCredits = plan.filter((t) => t.to === me).sort(byCur);
   const myDebt = myDebts[0];
-  const names = (ids: string[]) =>
-    ids.length > 2 ? `${ids.slice(0, 2).join(", ")} +${ids.length - 2}` : ids.join(" and ");
+  // One name once, even when the same person shows in several currencies.
+  const names = (all: string[]) => {
+    const ids = [...new Set(all)];
+    return ids.length > 2 ? `${ids.slice(0, 2).join(", ")} +${ids.length - 2}` : ids.join(" and ");
+  };
   const counterparts =
     allNeg && myDebts.length
       ? `to ${names(myDebts.map((t) => realName(t.to)))}`
@@ -154,8 +150,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
           {!empty && (
             <button
               type="button"
-              className="card pop mb-5 block w-full p-5 text-left"
-              style={{ "--edge": edge } as React.CSSProperties}
+              className="press mb-6 block w-full py-2 text-left"
               onClick={() => setTab("balances")}
             >
               {myNets.length === 0 ? (
@@ -166,14 +161,14 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                     {!empty && <Icon name="check" size={28} />} {heroLabel}
                   </div>
                   {!empty && plan.length > 0 && (
-                    <div className="caps mt-2">
+                    <div className="meta mt-2">
                       {plan.length} {plan.length === 1 ? "payment" : "payments"} left between others
                     </div>
                   )}
                 </>
               ) : (
                 <>
-                  <div className="caps mb-1">
+                  <div className="meta mb-1">
                     {heroLabel}
                     {approx && (
                       <span className="text-faint">
@@ -190,7 +185,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                       <Money v={v} c={c} signed={!allPos && !allNeg} tone={allPos || allNeg} />
                     </div>
                   ))}
-                  {counterparts && <div className="caps mt-2">{counterparts}</div>}
+                  {counterparts && <div className="meta mt-2">{counterparts}</div>}
                 </>
               )}
             </button>
@@ -211,28 +206,29 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
           <TabPanel id="gtab" value={tab}>
             {tab === "expenses" &&
               (days.length === 0 ? (
-                <div className="card p-8 text-center">
-                  <p className="text-lg font-extrabold">No expenses yet</p>
-                  <p className="mt-1 text-sm text-muted">Tap “Add expense” below.</p>
+                <div className="py-16 text-center">
+                  <p className="text-lg font-bold">Nothing spent yet</p>
+                  <p className="mt-2 text-sm text-muted">Tap “Add expense” below.</p>
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="-mx-4">
                   {days.map((d) => (
                     <section key={d.date}>
-                      <h3 className="caps mb-2">{dayLabel(d.date)}</h3>
-                      <ul className="card divider">
+                      <h3 className="day-head">{dayLabel(d.date)}</h3>
+                      <ul>
                         {d.items.map((row) =>
                           row.kind === "e" ? (
                             <li key={row.e.eid}>
                               <button
                                 type="button"
-                                className="row hover:bg-raised"
+                                className="row press hover:bg-panel"
                                 onClick={() => go(`/g/${saved.gid}/e/${row.e.eid}`)}
                               >
+                                <Glyph c={row.e.category} />
                                 <div className="min-w-0 flex-1">
                                   <div className="truncate font-bold">{row.e.desc}</div>
-                                  <div className="truncate text-xs text-muted">
-                                    {Object.keys(row.e.paidBy).map(name).join(", ")} ·{" "}
+                                  <div className="truncate text-[13px] text-muted">
+                                    {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
                                     <Money v={row.e.amount} c={row.e.currency} />
                                   </div>
                                 </div>
@@ -243,15 +239,15 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                             <li key={row.p.pid}>
                               <button
                                 type="button"
-                                className="row hover:bg-raised"
+                                className="row press hover:bg-panel"
                                 onClick={() => go(`/g/${saved.gid}/p/${row.p.pid}`)}
                               >
                                 <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
                                 <div className="min-w-0 flex-1">
                                   <Pair from={name(row.p.from)} to={name(row.p.to)} />
-                                  <div className="text-xs text-muted">payment</div>
+                                  <div className="text-[13px] text-muted">Payment</div>
                                 </div>
-                                <span className="font-bold">
+                                <span className="num shrink-0 text-sm font-bold text-fg-2">
                                   <Money v={row.p.amount} c={row.p.currency} />
                                 </span>
                               </button>
@@ -266,7 +262,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
 
             {tab === "balances" && (
               <div className="space-y-6">
-                <ul className="card divider">
+                <ul className="-mx-4">
                   {[...state.members]
                     .sort((a, b) => Number(b.mid === me) - Number(a.mid === me))
                     .map((m) => {
@@ -295,16 +291,16 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                 </ul>
 
                 <section id="settle-up">
-                  <h3 className="caps mb-2">
+                  <h3 className="meta mb-2 pt-2">
                     Settle up
                     {perCurrency && <span className="text-faint"> · each currency on its own</span>}
                   </h3>
                   {plan.length === 0 ? (
-                    <p className="card p-5 text-center font-bold text-muted">
+                    <p className="py-8 text-center font-bold text-muted">
                       {empty ? "Nothing spent yet" : "All settled"}
                     </p>
                   ) : (
-                    <ul className="card divider">
+                    <ul className="-mx-4">
                       {[...plan]
                         .sort((a, b) => Number(isMine(b)) - Number(isMine(a)))
                         .map((t) => {
@@ -338,7 +334,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
             )}
           </TabPanel>
 
-          <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
+          <div className="bottom-bar">
             <div className="mx-auto grid max-w-xl grid-cols-[1fr_2fr] gap-3">
               <button
                 type="button"
@@ -396,12 +392,12 @@ function MyShare({
   // In the split or a payer. A rounded share of 0 still counts as in it.
   const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
   // One style for every state: a short lowercase word, then the amount when there is one.
-  if (!inIt) return <span className="text-xs text-faint">not in it</span>;
-  if (net === 0) return <span className="text-xs text-muted">even</span>;
+  if (!inIt) return <span className="shrink-0 text-[13px] text-faint">not in it</span>;
+  if (net === 0) return <span className="shrink-0 text-[13px] text-muted">even</span>;
   // History, not a debt now: neutral colours, one short word for your side of this expense.
   return (
     <span className="num shrink-0 text-sm font-bold text-fg-2">
-      <span className="text-xs font-normal text-muted">{net > 0 ? "lent " : "owe "}</span>
+      <span className="text-[13px] font-normal text-muted">{net > 0 ? "lent " : "owe "}</span>
       {formatMoney(Math.abs(net), e.currency)}
     </span>
   );
@@ -410,12 +406,21 @@ function MyShare({
 /** "Aarav → Kabir", with full names so two people with one initial stay clear. */
 function Pair({ from, to }: { from: string; to: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-1.5 text-sm font-bold">
+    <div className="flex min-w-0 items-center gap-2 text-sm font-bold">
       <span className="truncate">{from}</span>
       <span className="shrink-0 text-muted">
         <Icon name="arrow" size={14} />
       </span>
       <span className="truncate">{to}</span>
     </div>
+  );
+}
+
+/** The leading slot of an expense row: the category glyph in a round tile. */
+function Glyph({ c }: { c?: string }) {
+  return (
+    <span className="avatar h-9 w-9 bg-raised-2 text-base" aria-hidden="true">
+      {CATEGORY_EMOJI[c ?? "General"] ?? CATEGORY_EMOJI.General}
+    </span>
   );
 }

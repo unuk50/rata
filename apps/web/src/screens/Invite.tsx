@@ -24,7 +24,7 @@ function Qr({ text }: { text: string }) {
     };
   }, [text]);
   return (
-    <div className="mx-auto aspect-square w-60 bg-white">
+    <div className="qr mx-auto aspect-square w-60">
       {path && (
         <svg
           // Four white modules on each side: the quiet zone scanners need.
@@ -71,7 +71,7 @@ export function Invite({ saved }: { saved: SavedGroup & GroupSecret }) {
       <div className="space-y-6 text-center">
         <h2 className="text-3xl font-extrabold tracking-tight">{name}</h2>
         <Qr text={link} />
-        <p className="caps flex items-center justify-center gap-1.5">
+        <p className="meta flex items-center justify-center gap-2">
           <Icon name="lock" size={14} /> Only people with this link can open it
         </p>
         <div className="flex gap-2">

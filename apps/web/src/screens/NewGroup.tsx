@@ -81,7 +81,7 @@ export function NewGroup() {
               <span className="text-2xl" aria-hidden="true">
                 {k.emoji}
               </span>
-              <span className="text-xs font-extrabold tracking-wide uppercase">{k.label}</span>
+              <span className="text-sm font-bold">{k.label}</span>
             </button>
           ))}
         </fieldset>
@@ -104,7 +104,7 @@ export function NewGroup() {
             </label>
             <select
               id="gcur"
-              className="field"
+              className="field-select"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
             >

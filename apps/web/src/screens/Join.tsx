@@ -84,9 +84,9 @@ export function Join({ code }: { code: string }) {
       ) : !state.group ? (
         <p className="text-muted">Opening…</p>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
-            <h2 className="caps mb-2">Tap your name</h2>
+            <h2 className="meta mb-2">Tap your name</h2>
             <ul className="card divider">
               {state.members.map((m, i) => (
                 <li key={m.mid}>

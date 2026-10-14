@@ -80,7 +80,7 @@ export function Home() {
         <h1 className="title flex-1">rata</h1>
         <button
           type="button"
-          className="caps flex min-h-11 items-center gap-1.5 px-1"
+          className="meta flex min-h-11 items-center gap-2 px-1"
           aria-expanded={about}
           onClick={() => setAbout(!about)}
         >
@@ -114,11 +114,11 @@ export function Home() {
               <li key={g.gid}>
                 <button
                   type="button"
-                  className="row min-h-16 hover:bg-raised"
+                  className="row min-h-18 hover:bg-raised"
                   onClick={() => go(`/g/${g.gid}`)}
                 >
                   {/* The group's letter tells groups of one kind apart; the kind is a badge. */}
-                  <span className="tile h-11 w-11 text-lg">
+                  <span className="tile h-12 w-12 text-lg">
                     {g.name.trim().charAt(0).toUpperCase() || "?"}
                     <span
                       className="absolute right-0.5 bottom-0.5 text-[11px] leading-none"
@@ -182,18 +182,18 @@ export function Home() {
 }
 
 function GroupNet({ n }: { n: Net | undefined }) {
-  if (n?.why === "new") return <span className="caps text-faint">New</span>;
+  if (n?.why === "new") return <span className="meta text-faint">New</span>;
   if (n?.why === "rates")
     return (
-      <span className="caps text-faint" title="Needs exchange rates">
+      <span className="meta text-faint" title="Needs exchange rates">
         No rates
       </span>
     );
   if (!n || n.v === null) return null;
-  if (n.v === 0) return <span className="caps text-owed">Settled</span>;
+  if (n.v === 0) return <span className="meta">You're settled</span>;
   return (
     <span className="text-right">
-      <span className="caps block">{n.v > 0 ? "You get" : "You owe"}</span>
+      <span className="meta block">{n.v > 0 ? "You're owed" : "You owe"}</span>
       <span className="font-extrabold">
         <Money v={n.v} c={n.c} tone />
       </span>

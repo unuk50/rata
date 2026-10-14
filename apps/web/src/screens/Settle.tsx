@@ -5,7 +5,9 @@ import type { SavedGroup } from "../lib/storage";
 import { toast } from "../lib/toast";
 import {
   amountInput,
+  amountWidth,
   CURRENCIES,
+  currencySymbol,
   Header,
   Icon,
   Notice,
@@ -119,7 +121,7 @@ export function Settle({
       <div className="space-y-6">
         <div className="flex flex-col items-center gap-1 pt-2 pb-4">
           <select
-            className="select-plain text-sm tracking-wide"
+            className="select-plain text-sm"
             value={cur}
             onChange={(e) => {
               setAmount(reAmount(amount, cur, e.target.value));
@@ -131,21 +133,29 @@ export function Settle({
               <option key={c}>{c}</option>
             ))}
           </select>
-          <input
-            className="amount text-center"
-            inputMode="decimal"
-            placeholder={zero(cur)}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            onBlur={() => {
-              const v = parseAmount(amount, cur);
-              if (v) setAmount(amountInput(v, cur));
-            }}
-            aria-label="Amount"
-          />
+          <div className="flex max-w-full items-baseline justify-center gap-1">
+            {currencySymbol(cur) && (
+              <span className="text-4xl font-extrabold text-muted" aria-hidden="true">
+                {currencySymbol(cur)}
+              </span>
+            )}
+            <input
+              className="amount"
+              style={{ width: amountWidth(amount, cur) }}
+              inputMode="decimal"
+              placeholder={zero(cur)}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onBlur={() => {
+                const v = parseAmount(amount, cur);
+                if (v) setAmount(amountInput(v, cur));
+              }}
+              aria-label="Amount"
+            />
+          </div>
         </div>
         <section>
-          <h2 className="caps mb-2">From</h2>
+          <h2 className="meta mb-2">From</h2>
           <PeoplePicker
             label="From"
             people={members}
@@ -160,7 +170,7 @@ export function Settle({
           </span>
         </div>
         <section>
-          <h2 className="caps mb-2">To</h2>
+          <h2 className="meta mb-2">To</h2>
           <PeoplePicker
             label="To"
             people={members}
@@ -170,9 +180,9 @@ export function Settle({
             onToggle={setTo}
           />
         </section>
-        <p className="caps text-center">Records only. No money moves.</p>
+        <p className="meta text-center">Records only. No money moves.</p>
       </div>
-      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
+      <div className="bottom-bar">
         <div className="mx-auto max-w-xl">
           {error && <p className="mb-2 text-sm text-owes">{error}</p>}
           <button type="button" className="btn-primary w-full" onClick={save} disabled={!sync}>

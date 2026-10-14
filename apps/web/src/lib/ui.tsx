@@ -58,6 +58,28 @@ export function reAmount(text: string, from: string, to: string): string {
   return amountInput(Math.round(major * 10 ** currencyExponent(to)), to);
 }
 
+/** The short sign for a currency, like ₹ or $. Empty when the currency has no short sign. */
+export function currencySymbol(cur: string): string {
+  try {
+    const sym =
+      new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: cur,
+        currencyDisplay: "narrowSymbol",
+      })
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value ?? "";
+    return sym.length <= 2 ? sym : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Width for an amount input that grows with its text, so the sign stays next to the digits. */
+export function amountWidth(text: string, cur: string): string {
+  return `${Math.max(text.length || zero(cur).length, 1) + 0.5}ch`;
+}
+
 /** Placeholder for an amount field: 0.00, or 0 for currencies without minor units. */
 export function zero(cur: string): string {
   return (0).toFixed(currencyExponent(cur));
@@ -175,7 +197,7 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   if (status === "loading") return null;
   return (
     <span
-      className="caps flex items-center gap-1.5 px-1"
+      className="meta flex items-center gap-2 px-1"
       title={pending ? `${pending} change(s) waiting to send` : label}
     >
       <span className={`h-2 w-2 ${color}`} />
@@ -187,19 +209,19 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
   );
 }
 
-// Eight hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
-// People 9 and up reuse a hue at a different lightness.
-const HUES = [24, 200, 290, 235, 330, 175, 265, 310];
+// Ten hues, with no green, red or lime-yellow (those mean owed, owes and selected).
+// Neighbours in the list are far apart on the wheel. People 11 and up reuse a hue lighter.
+const HUES = [24, 212, 290, 172, 44, 258, 332, 192, 236, 310];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
   const n = i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
   const hue = HUES[n % HUES.length] ?? 0;
-  const light = Math.floor(n / HUES.length) % 2 === 0 ? 24 : 36;
+  const light = Math.floor(n / HUES.length) % 2 === 0 ? 30 : 42;
   return (
     <span
       className={`avatar ${big ? "h-12 w-12 text-lg" : "h-9 w-9 text-sm"}`}
-      style={{ background: `hsl(${hue} 45% ${light}%)`, color: `hsl(${hue} 90% 85%)` }}
+      style={{ background: `hsl(${hue} 55% ${light}%)`, color: `hsl(${hue} 100% 90%)` }}
       aria-hidden="true"
     >
       {name.trim().charAt(0).toUpperCase() || "?"}
@@ -296,7 +318,7 @@ export function ToastBar({ raised }: { raised: boolean }) {
         {t.action && (
           <button
             type="button"
-            className="min-h-11 px-2 text-sm font-extrabold tracking-wide text-accent uppercase"
+            className="min-h-11 px-2 text-sm font-bold text-accent"
             onClick={() => {
               t.action?.run();
               dismissToast();
@@ -323,7 +345,7 @@ export function Notice({
   to?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-5 pt-16 text-center">
+    <div className="flex flex-col items-center gap-6 pt-16 text-center">
       <span className="avatar h-16 w-16 bg-raised text-fg-2">
         <Icon name={icon} size={32} />
       </span>
@@ -354,6 +376,22 @@ export const CATEGORIES = [
   "Gifts",
   "Other",
 ];
+
+/** One glyph for each category, for the leading slot of an expense row. */
+export const CATEGORY_EMOJI: Record<string, string> = {
+  General: "\ud83e\uddfe",
+  Food: "\ud83c\udf7d\ufe0f",
+  Groceries: "\ud83d\uded2",
+  Transport: "\ud83d\ude95",
+  Stay: "\ud83d\udecf\ufe0f",
+  Fun: "\ud83c\udf9f\ufe0f",
+  Shopping: "\ud83d\udecd\ufe0f",
+  Bills: "\ud83d\udca1",
+  Rent: "\ud83c\udfe0",
+  Health: "\ud83d\udc8a",
+  Gifts: "\ud83c\udf81",
+  Other: "\u2728",
+};
 
 export const KINDS = [
   { id: "trip", label: "Trip", emoji: "\u2708\ufe0f" },

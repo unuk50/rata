@@ -134,7 +134,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
               if (e.key === "Enter") e.currentTarget.blur();
             }}
           />
-          <p className="caps">
+          <p className="meta">
             {g?.currency} ·{" "}
             {Object.entries(total)
               .map(([c, v]) => formatMoney(v, c))
@@ -142,13 +142,13 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
           </p>
         </section>
         <section>
-          <h2 className="caps mb-2">People</h2>
+          <h2 className="meta mb-2">People</h2>
           <ul className="card divider">
             {state.members.map((m, i) => (
               <li key={m.mid} className="row">
                 <Avatar name={m.name} i={i} />
                 <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
-                {m.mid === saved.me && <span className="caps">You</span>}
+                {m.mid === saved.me && <span className="meta">You</span>}
               </li>
             ))}
           </ul>

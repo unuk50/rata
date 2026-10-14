@@ -1,6 +1,6 @@
 # Rata design language
 
-Rata is dark, direct and tactile. The design borrows ideas from **NeoPOP**, the open-source design system from CRED (Apache-2.0, [github.com/CRED-CLUB/neopop-web](https://github.com/CRED-CLUB/neopop-web)): black surfaces, strong type and 3D "pop" buttons that move down when you press them.
+Rata is dark, direct and fluid. It started from ideas in **NeoPOP**, the open-source design system from CRED (Apache-2.0, [github.com/CRED-CLUB/neopop-web](https://github.com/CRED-CLUB/neopop-web)): black surfaces and strong type. The 3D block look is gone. Rata now uses flat pill buttons, filled shapes and continuous lists, like the payment apps people in India use each day.
 
 We use the ideas and the open palette only. We do not use the CRED name, logo, illustrations or proprietary fonts. Rata has its own accent colour and its own font.
 
@@ -17,12 +17,11 @@ All tokens are in [`apps/web/src/index.css`](../apps/web/src/index.css) (`@theme
 | `raised` | `#1a1a1a` | Field, tab track, row hover |
 | `raised-2` | `#232323` | Field in focus, secondary button, toast |
 | `line` | white 10% | Dividers between rows |
-| `line-strong` | `#3d3d3d` | Edge of a neutral pop |
+| `line-strong` | `#3d3d3d` | Selected tab |
 | `radius-surface` | 16 px | Cards, tiles, sheets |
 | `radius-control` | 12 px | Fields, buttons, tabs |
 | `fg` / `fg-2` / `muted` / `faint` | white 90 / 70 / 50 / 30% | Heading / body / label / hint |
 | `accent` | `#e5fe40` | The **one** main action on a screen. Selection. |
-| `accent-edge` | `#a0b22d` | 3D edge of an accent button |
 | `owed` | `#06c270` | Money comes back to you |
 | `owes` | `#ee4d37` | You owe money. Delete. Errors. |
 | `warn` | `#f08d32` | Syncing, warnings |
@@ -32,9 +31,9 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 ## Rules
 
 1. **Soft and borderless.** Surfaces and controls are filled shapes with the two radius tokens. No borders on cards, fields or dropdowns; a field gets lighter in focus. Avatars are round. Space follows an 8 px grid with a 16 px side gutter. Put radius and shape in `index.css` utilities, not in screens.
-2. **One accent action per screen.** It uses `btn-primary`. Other actions use `btn-secondary` (grey pop) or `btn-ghost` (text only).
-3. **Pop for actions only.** A pop edge means "you can press this". Do not put a pop edge on a card or a static item.
-4. **Labels are caps.** Field labels, section titles and small meta text use `caps` (11 px, 800, wide tracking, `muted`).
+2. **One accent action per screen.** It uses `btn-primary`. Other actions use `btn-secondary` (grey pill) or `btn-ghost` (text only).
+3. **Flat, with soft feedback.** Buttons are flat pills. On press they shrink a little (`press`). No 3D edges, no outlines. Lists run edge to edge with no boxes; day headings stick under the page header. Each row has the same leading slot: an avatar, or a category glyph for an expense.
+4. **Sentence case.** Labels, section titles, tabs and buttons use sentence case. Small meta text uses `meta` (13 px, 600, `muted`). Do not use tracked capitals.
 5. **Money is big and bold.** A balance uses 800 weight and tabular numbers (`num`). Green and red show only the direction of money, not decoration.
 6. **Dark only.** No light theme. Contrast of body text on `ink` is at least 4.5:1.
 7. **Motion is short.** 120 ms ease-in-out for the press. No bounce, no long fades.
@@ -55,15 +54,19 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 | `card` | A group of related items. Background `panel`, `radius-surface`, no border. |
 | `divider` | Lines between rows in a card. |
 | `row` | A full-width list row (avatar, text, value). |
-| `btn-primary` | Accent pop button. One per screen. |
-| `btn-secondary` | Grey pop button. |
-| `btn-danger` | Red pop button for a destructive final step. |
+| `btn-primary` | Accent pill button. One per screen. |
+| `btn-secondary` | Grey pill button. |
+| `btn-danger` | Red pill button for a destructive final step. |
 | `btn-ghost` | Text button: back, delete link, low-priority actions. |
 | `btn-sm` | Smaller size for buttons in a row. |
-| `field`, `label` | Input, select, textarea, and their label. No border. |
+| `field`, `label` | Input, textarea, and their label. No border. |
+| `field-select` | A select or date input with the field shape and a chevron. |
 | `select-plain` | A select that reads as text with a chevron, for the currency above an amount. |
 | `chip` | A round name chip that you can remove. |
-| `toast` | The floating message bar from `toast()`. |
+| `toast` | The floating message bar from `toast()`. A soft shadow, no outline. |
+| `bottom-bar` | The sticky action bar. It fades into the page, with no top line. |
+| `day-head` | A sticky day heading in a list. |
+| `qr` | The white invite QR code with soft corners. |
 | `tile`, `avatar` | Group tile on Home; round person initial. |
 | `<Tabs>` + `<TabPanel>` | Switch between views or split methods. Selected tab is solid white. Give both the same `id`. |
 | `<PeoplePicker>` | A row of avatars to tap. Selected avatars get an accent ring. Single or multi select. |
@@ -75,6 +78,7 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 | `<Avatar>` | Round initial. Pass `i` (index in the group) for a unique colour. |
 | `<Money>` | Formatted amount. `signed` adds the owed and owes colour. |
 | `<Header>` | Sticky screen title with back and right actions. |
-| `caps`, `title`, `num` | Label text, page title, tabular numbers. |
+| `meta`, `title`, `num` | Small sentence-case text, page title, tabular numbers. |
+| `press` | The shrink on press for buttons and tappable rows. |
 
 To add a new component, add it here and in `index.css` or `lib/ui.tsx` first, then use it.

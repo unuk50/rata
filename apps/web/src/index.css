@@ -2,8 +2,8 @@
 @import "@fontsource-variable/manrope/wght.css";
 
 /*
- * Rata design tokens. Dark, high contrast, square edges, 3D "pop" actions.
- * Ideas from the open-source NeoPOP system (Apache-2.0). Rules: docs/design.md.
+ * Rata design tokens. Dark, high contrast, soft and borderless.
+ * Rules: docs/design.md.
  * Use these tokens only. Do not add raw colours in components.
  */
 @theme {
@@ -25,19 +25,18 @@
 
   /* Brand accent: one colour for the main action only */
   --color-accent: #e5fe40;
-  --color-accent-edge: #a0b22d;
   --color-on-accent: #0d0d0d;
 
   /* Money meaning */
   --color-owed: #06c270; /* you get money back */
   --color-owes: #ee4d37; /* you owe money */
-  --color-owes-edge: #b32e1f;
   --color-warn: #f08d32;
   --color-info: #144cc7;
 
   /* Shape: soft surfaces, 8 px grid. Only these two radii. */
   --radius-surface: 16px; /* cards, sheets, tiles */
-  --radius-control: 12px; /* fields, buttons, tabs, chips */
+  --radius-control: 12px; /* fields, tabs, small controls */
+  /* Buttons, chips and avatars are full pills. */
 }
 
 @layer base {
@@ -72,9 +71,9 @@
   @apply divide-y divide-line;
 }
 
-/* Text styles */
-@utility caps {
-  @apply text-[11px] font-extrabold tracking-[0.12em] text-muted uppercase;
+/* Text styles. Sentence case everywhere: no tracked capitals. */
+@utility meta {
+  @apply text-[13px] font-semibold text-muted;
 }
 @utility title {
   @apply text-[28px] leading-tight font-extrabold tracking-tight text-fg;
@@ -83,57 +82,37 @@
   font-variant-numeric: tabular-nums;
 }
 
-/*
- * Pop buttons. The face sits up and left. A hard 45-degree edge shows
- * below and right. On press, the face moves into the edge.
- */
-@utility pop {
-  --pop-depth: 4px;
-  border-radius: var(--radius-control);
-  box-shadow:
-    1px 1px 0 var(--edge, var(--color-line-strong)),
-    2px 2px 0 var(--edge, var(--color-line-strong)),
-    3px 3px 0 var(--edge, var(--color-line-strong)),
-    4px 4px 0 var(--edge, var(--color-line-strong));
+/* Buttons are flat pills. On press they shrink a little. */
+@utility press {
   transition:
-    transform 0.12s ease-in-out,
-    box-shadow 0.12s ease-in-out;
+    transform 0.12s ease-out,
+    background-color 0.12s ease-out;
   &:active:not(:disabled) {
-    transform: translate(var(--pop-depth), var(--pop-depth));
-    box-shadow: 0 0 0 transparent;
-  }
-  &:disabled {
-    box-shadow: none;
-    background: transparent;
-    color: var(--color-muted);
-    border: 1px solid var(--color-line-strong);
-    opacity: 1;
+    transform: scale(0.97);
   }
 }
 @utility btn {
-  @apply relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 px-4 text-sm whitespace-nowrap font-extrabold tracking-wide uppercase select-none disabled:cursor-not-allowed disabled:opacity-40;
+  @apply press relative inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 px-5 text-[15px] whitespace-nowrap font-bold select-none disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint;
+  border-radius: 9999px;
 }
 @utility btn-primary {
-  @apply btn pop bg-accent text-on-accent;
-  --edge: var(--color-accent-edge);
+  @apply btn bg-accent text-on-accent;
 }
 @utility btn-secondary {
-  @apply btn pop bg-raised-2 text-fg;
-  --edge: var(--color-line-strong);
+  @apply btn bg-raised-2 text-fg;
 }
 @utility btn-danger {
-  @apply btn pop bg-owes text-white;
-  --edge: var(--color-owes-edge);
+  @apply btn bg-owes text-white;
 }
 @utility btn-ghost {
-  @apply btn px-3 text-fg-2 hover:text-fg active:opacity-70;
-  border-radius: var(--radius-control);
+  @apply btn px-4 text-fg-2 hover:text-fg active:opacity-70;
 }
 @utility btn-sm {
-  @apply min-h-9 px-3 text-xs;
+  @apply min-h-9 px-4 text-[13px];
 }
 @utility btn-icon {
-  @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center text-fg-2 hover:text-fg active:opacity-70;
+  @apply press inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center text-fg-2 hover:text-fg;
+  border-radius: 9999px;
 }
 
 /* Inputs */
@@ -142,41 +121,50 @@
   @apply w-full border-0 bg-raised px-4 py-3 text-fg outline-none placeholder:text-faint focus:bg-raised-2;
   border-radius: var(--radius-control);
 }
+/* A filled select or date field: the same shape as a field, with a chevron. */
+@utility field-select {
+  @apply field cursor-pointer appearance-none pr-10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='white' stroke-opacity='.6' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  &::-webkit-calendar-picker-indicator {
+    opacity: 0;
+  }
+}
 /* A select that reads as text with a chevron, for the currency next to an amount. */
 @utility select-plain {
-  @apply cursor-pointer appearance-none border-0 bg-transparent pr-6 font-extrabold text-fg-2 outline-none;
+  @apply cursor-pointer appearance-none border-0 bg-transparent pr-6 font-bold text-fg-2 outline-none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='white' stroke-opacity='.6' stroke-width='2'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 4px center;
 }
 @utility label {
-  @apply caps mb-1.5 block;
+  @apply meta mb-2 block;
 }
 
 /* Tabs and choices */
 @utility tabs {
-  @apply grid bg-raised p-1 text-xs font-extrabold tracking-wide uppercase;
-  border-radius: var(--radius-control);
+  @apply grid bg-raised p-1 text-sm font-bold;
+  border-radius: 9999px;
 }
 @utility tab {
-  @apply min-h-9 py-2 text-muted transition-colors;
-  border-radius: calc(var(--radius-control) - 4px);
+  @apply min-h-10 py-2 text-muted transition-colors;
+  border-radius: 9999px;
 }
 @utility tab-on {
-  @apply bg-fg text-ink!;
+  @apply bg-line-strong text-fg!;
 }
 @utility choice {
-  @apply bg-raised p-3 text-left transition-colors;
-  border-radius: var(--radius-control);
+  @apply bg-raised p-4 text-left transition-colors;
+  border-radius: var(--radius-surface);
 }
 @utility choice-on {
   @apply bg-accent/10;
   box-shadow: inset 0 0 0 2px var(--color-accent);
 }
 @utility person {
-  @apply flex flex-col items-center gap-1.5 p-1.5 text-muted;
+  @apply press flex flex-col items-center gap-2 p-1 text-muted;
   border-radius: var(--radius-control);
-  transition: transform 0.12s ease-in-out;
 }
 @utility person-on {
   @apply text-fg opacity-100;
@@ -196,23 +184,35 @@
   @apply flex items-center gap-2 bg-raised py-1 pr-1 pl-1;
   border-radius: 9999px;
 }
-/* A floating message bar. */
+/* A floating message bar. A soft shadow lifts it; no outline. */
 @utility toast {
   @apply flex items-center gap-3 bg-raised-2 px-4 py-2 text-fg;
-  border-radius: var(--radius-control);
-  box-shadow:
-    0 0 0 1px var(--color-line-strong),
-    0 12px 32px rgb(0 0 0 / 0.8);
+  border-radius: var(--radius-surface);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.7);
 }
-/* Small square-ish tile for a group on Home. */
+/* Small tile for a group on Home. */
 @utility tile {
-  @apply relative flex shrink-0 items-center justify-center bg-raised font-extrabold;
+  @apply relative flex shrink-0 items-center justify-center bg-raised-2 font-extrabold text-fg;
   border-radius: var(--radius-control);
 }
 @utility amount {
-  @apply w-full min-w-0 bg-transparent text-right text-5xl font-extrabold tracking-tight text-fg outline-none placeholder:text-faint;
+  @apply min-w-0 bg-transparent text-5xl font-extrabold tracking-tight text-fg outline-none placeholder:text-faint;
   font-variant-numeric: tabular-nums;
 }
 @utility row {
-  @apply flex w-full items-center gap-3 px-4 py-3 text-left;
+  @apply flex w-full items-center gap-4 px-4 py-3 text-left;
+}
+/* The sticky action bar at the bottom. It fades into the page; no top line. */
+@utility bottom-bar {
+  @apply fixed inset-x-0 bottom-0 px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))];
+  background: linear-gradient(to top, var(--color-ink) 70%, transparent);
+}
+/* A day heading that sticks under the page header while its rows scroll. */
+@utility day-head {
+  @apply meta sticky top-14 z-[5] bg-ink/90 px-4 pt-4 pb-2 backdrop-blur;
+}
+/* The invite QR code: white, with soft corners. */
+@utility qr {
+  @apply overflow-hidden bg-white;
+  border-radius: var(--radius-surface);
 }

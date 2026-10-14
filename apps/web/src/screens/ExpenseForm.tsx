@@ -17,8 +17,10 @@ import { toast } from "../lib/toast";
 import {
   Avatar,
   amountInput,
+  amountWidth,
   CATEGORIES,
   CURRENCIES,
+  currencySymbol,
   Header,
   Notice,
   PeoplePicker,
@@ -289,7 +291,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         <div className="flex flex-col items-center gap-1 pt-2 pb-4">
           <select
             id="cur"
-            className="select-plain text-sm tracking-wide"
+            className="select-plain text-sm"
             value={cur}
             onChange={(e) => {
               const to = e.target.value;
@@ -326,19 +328,27 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               <option key={c}>{c}</option>
             ))}
           </select>
-          <input
-            id="amt"
-            className="amount text-center"
-            inputMode="decimal"
-            placeholder={zero(cur)}
-            aria-label="Amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            onBlur={() => {
-              if (total) setAmount(amountInput(total, cur));
-            }}
-            autoFocus={!existing}
-          />
+          <div className="flex max-w-full items-baseline justify-center gap-1">
+            {currencySymbol(cur) && (
+              <span className="text-4xl font-extrabold text-muted" aria-hidden="true">
+                {currencySymbol(cur)}
+              </span>
+            )}
+            <input
+              id="amt"
+              className="amount"
+              style={{ width: amountWidth(amount, cur) }}
+              inputMode="decimal"
+              placeholder={zero(cur)}
+              aria-label="Amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onBlur={() => {
+                if (total) setAmount(amountInput(total, cur));
+              }}
+              autoFocus={!existing}
+            />
+          </div>
         </div>
         <input
           id="desc"
@@ -351,10 +361,10 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
 
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="caps">Paid by</h2>
+            <h2 className="meta">Paid by</h2>
             <button
               type="button"
-              className="caps underline"
+              className="meta underline"
               onClick={() => setPayer(payer === "*" ? (saved.me ?? members[0]?.mid ?? "") : "*")}
             >
               {payer === "*" ? "One person" : "Several people"}
@@ -369,7 +379,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               onToggle={setPayer}
             />
           ) : (
-            <div className="card divider">
+            <div className="card">
               {members.map((m, i) => (
                 <div key={m.mid} className="flex items-center gap-3 p-2">
                   <Avatar name={m.name} i={i} />
@@ -387,7 +397,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                 </div>
               ))}
               {total !== null && (
-                <div className={`caps p-2 text-right ${paidSoFar === total ? "" : "text-owes"}`}>
+                <div className={`meta p-2 text-right ${paidSoFar === total ? "" : "text-owes"}`}>
                   Paid {formatMoney(paidSoFar, cur)} of {formatMoney(total, cur)}
                   {paidSoFar < total && ` · ${formatMoney(total - paidSoFar, cur)} left`}
                 </div>
@@ -397,7 +407,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         </section>
 
         <section>
-          <h2 className="caps mb-2">Split</h2>
+          <h2 className="meta mb-2">Split</h2>
           <div className="mb-3">
             <Tabs id="split" options={METHODS} value={method} onChange={pickMethod} />
           </div>
@@ -411,7 +421,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                   selected={(mid) => !!inSplit[mid]}
                   onToggle={(mid) => setInSplit({ ...inSplit, [mid]: !inSplit[mid] })}
                 />
-                <p className="caps mt-2">
+                <p className="meta mt-2">
                   {inCount === 0
                     ? "Tap people to split"
                     : `${inCount} ${inCount === 1 ? "person" : "people"}${each !== undefined ? ` · ${about}${formatMoney(each, cur)} each` : ""}`}
@@ -419,7 +429,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
               </>
             ) : (
               <>
-                <div className="card divider">
+                <div className="card">
                   {members.map((m, i) => (
                     <div key={m.mid} className="flex items-center gap-3 p-2">
                       <Avatar name={m.name} i={i} />
@@ -443,13 +453,13 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                   ))}
                 </div>
                 {method === "exact" && total !== null && (
-                  <p className={`caps mt-2 ${sumParts === total ? "" : "text-owes"}`}>
+                  <p className={`meta mt-2 ${sumParts === total ? "" : "text-owes"}`}>
                     {formatMoney(sumParts, cur)} / {formatMoney(total, cur)}
                   </p>
                 )}
                 {method === "percent" && (
                   <p
-                    className={`caps mt-2 ${Math.round(sumParts * 100) === 10000 ? "" : "text-owes"}`}
+                    className={`meta mt-2 ${Math.round(sumParts * 100) === 10000 ? "" : "text-owes"}`}
                   >
                     {sumParts}% / 100%
                   </p>
@@ -463,7 +473,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
           className="group"
           open={!!existing && (!isToday || category !== "General" || !!note)}
         >
-          <summary className="caps flex cursor-pointer list-none items-center gap-2">
+          <summary className="meta flex cursor-pointer list-none items-center gap-2">
             <span className="text-fg-2">{isToday ? "Today" : date}</span>·
             <span className="text-fg-2">{category}</span>
             {note && <span className="text-fg-2">· Note</span>}
@@ -478,7 +488,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                 <input
                   id="date"
                   type="date"
-                  className="field"
+                  className="field-select"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />
@@ -489,7 +499,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                 </label>
                 <select
                   id="cat"
-                  className="field"
+                  className="field-select"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 >
@@ -514,7 +524,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         </details>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
+      <div className="bottom-bar">
         <div className="mx-auto max-w-xl">
           {error && <p className="mb-2 text-sm text-owes">{error}</p>}
           <button type="button" className="btn-primary w-full" onClick={save}>
