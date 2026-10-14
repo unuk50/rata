@@ -37,15 +37,18 @@ function monthLabel(month: string) {
   });
 }
 
-/**
- * A day marker shows where a day starts, but only for Today, Yesterday, or a day with two or
- * more rows. A long list of one-row days stays a clean list under its month.
- */
+/** A marker for Today and Yesterday only. Other rows show their day at the end of the second line. */
 function showMark(items: { date: string }[], i: number) {
   const date = items[i]?.date;
   if (!date || (i > 0 && items[i - 1]?.date === date)) return false;
   const mark = dayMark(date);
-  return mark === "Today" || mark === "Yesterday" || items[i + 1]?.date === date;
+  return mark === "Today" || mark === "Yesterday";
+}
+
+/** " · Sun 11" for rows not under a Today or Yesterday marker. */
+function daySuffix(date: string) {
+  const mark = dayMark(date);
+  return mark === "Today" || mark === "Yesterday" ? "" : ` · ${mark}`;
 }
 
 /** "Today", "Yesterday" or "Mon 12": a small marker where a new day starts inside a month. */
@@ -268,6 +271,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                   <div className="truncate text-[13px] text-muted">
                                     {Object.keys(row.e.paidBy).map(name).join(", ")} paid{" "}
                                     <Money v={row.e.amount} c={row.e.currency} />
+                                    {daySuffix(row.e.date)}
                                   </div>
                                 </div>
                                 <MyShare e={row.e} me={me} />
@@ -283,7 +287,9 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                                 <Avatar name={realName(row.p.from)} i={idx(row.p.from)} />
                                 <div className="min-w-0 flex-1">
                                   <Pair from={name(row.p.from)} to={name(row.p.to)} />
-                                  <div className="text-[13px] text-muted">Payment</div>
+                                  <div className="text-[13px] text-muted">
+                                    Payment{daySuffix(row.p.date)}
+                                  </div>
                                 </div>
                                 <span className="num shrink-0 text-sm font-bold text-fg-2">
                                   <Money v={row.p.amount} c={row.p.currency} />

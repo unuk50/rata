@@ -214,20 +214,14 @@ function luminance(h: number, s: number, l: number): number {
   return 0.2126 * ch(0) + 0.7152 * ch(8) + 0.0722 * ch(4);
 }
 
-// For each colour, a background and a letter colour with at least 4.5:1 contrast.
-// White letters on the darkest shade that passes; if that shade is murky (under 38%),
-// use dark letters on a light shade instead, so yellow and teal stay bright.
+// For each colour, the lightest shade (up to 50%) where white letters have 4.5:1 contrast.
+// One letter colour for all, so no disc draws the eye more than another.
 const SWATCH = HUES.map((h) => {
   const hue = h < 0 ? 215 : h;
   const sat = h < 0 ? 0.12 : 0.65;
-  const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   let l = 50;
-  while (l > 20 && ratio(1, luminance(hue, sat, l / 100)) < 4.5) l -= 1;
-  if (l >= 38) return { bg: `hsl(${hue} ${sat * 100}% ${l}%)`, fg: "#fff" };
-  const ink = luminance(hue, 0.6, 0.1);
-  let d = 50;
-  while (d < 80 && ratio(luminance(hue, sat, d / 100), ink) < 4.5) d += 1;
-  return { bg: `hsl(${hue} ${sat * 100}% ${d}%)`, fg: `hsl(${hue} 60% 10%)` };
+  while (l > 20 && 1.05 / (luminance(hue, sat, l / 100) + 0.05) < 4.5) l -= 1;
+  return { bg: `hsl(${hue} ${sat * 100}% ${l}%)`, fg: "#fff" };
 });
 
 /** Colour by position in the group, so people in one group never share a colour. */
@@ -401,26 +395,26 @@ export const CATEGORIES = [
 export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
   General: { d: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", hue: -1 },
   Food: { d: "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 3-3 7h3v11", hue: 24 },
-  Groceries: { d: "M3 4h2l2 11h11l2-8H6M9 20h.01M17 20h.01", hue: 160 },
+  Groceries: { d: "M3 4h2l2 11h11l2-8H6M9 20h.01M17 20h.01", hue: 175 },
   Travel: {
     d: "M10 14l-6 3v-2l6-5V5a2 2 0 0 1 4 0v5l6 5v2l-6-3v4l2 2v1l-4-1-4 1v-1l2-2z",
-    hue: 195,
+    hue: 210,
   },
-  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 225 },
-  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 255 },
-  Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 305 },
-  Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 280 },
+  Transport: { d: "M5 16V9l2-4h10l2 4v7zM5 16v3M19 16v3M5 11h14M8 13.5h.01M16 13.5h.01", hue: 235 },
+  Stay: { d: "M3 19V6M3 12h18v7M21 19v-4a3 3 0 0 0-3-3h-7v0M7 9h.01", hue: 260 },
+  Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 310 },
+  Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 285 },
   Bills: { d: "M13 3L5 14h6l-1 7 8-11h-6z", hue: 48 },
   Rent: { d: "M3 11l9-7 9 7M5 9v11h14V9M10 20v-6h4v6", hue: -1 },
-  Health: { d: "M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z", hue: 355 },
+  Health: { d: "M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z", hue: 190 },
   Gifts: {
     d: "M4 10h16v4H4zM6 14h12v7H6zM12 10v11M12 10c-2-4-6-4-6-1s6 1 6 1c2-4 6-4 6-1s-6 1-6 1",
-    hue: 330,
+    hue: 335,
   },
   Other: { d: "M6 12h.01M12 12h.01M18 12h.01", hue: -1 },
 };
 
-/** The leading slot of an expense row: the category icon on a tinted disc. */
+/** The leading slot of an expense row: a tinted category icon on a neutral disc. */
 export function CategoryIcon({ c }: { c?: string }) {
   const k = c && CATEGORY_ICON[c] ? c : "General";
   const { d, hue } = CATEGORY_ICON[k] ?? { d: "", hue: 0 };
@@ -428,8 +422,8 @@ export function CategoryIcon({ c }: { c?: string }) {
     <span
       className="avatar h-10 w-10"
       style={{
-        background: hue < 0 ? "var(--color-raised-2)" : `hsl(${hue} 50% 26%)`,
-        color: hue < 0 ? "var(--color-fg-2)" : `hsl(${hue} 90% 80%)`,
+        background: "var(--color-raised-2)",
+        color: hue < 0 ? "var(--color-fg-2)" : `hsl(${hue} 70% 72%)`,
       }}
       aria-hidden="true"
     >

@@ -34,10 +34,14 @@ export function toMajor(minor: Minor, currency: string): number {
   return minor / 10 ** currencyExponent(currency);
 }
 
+/** An amount for display. Whole amounts drop the zero minor units: ₹1,000, not ₹1,000.00. */
 export function formatMoney(minor: Minor, currency: string, locale?: string): string {
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(
-    toMajor(minor, currency),
-  );
+  const whole = minor % 10 ** currencyExponent(currency) === 0;
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    ...(whole ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}),
+  }).format(toMajor(minor, currency));
 }
 
 /**
