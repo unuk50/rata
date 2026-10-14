@@ -37,6 +37,17 @@ function monthLabel(month: string) {
   });
 }
 
+/**
+ * A day marker shows where a day starts, but only for Today, Yesterday, or a day with two or
+ * more rows. A long list of one-row days stays a clean list under its month.
+ */
+function showMark(items: { date: string }[], i: number) {
+  const date = items[i]?.date;
+  if (!date || (i > 0 && items[i - 1]?.date === date)) return false;
+  const mark = dayMark(date);
+  return mark === "Today" || mark === "Yesterday" || items[i + 1]?.date === date;
+}
+
 /** "Today", "Yesterday" or "Mon 12": a small marker where a new day starts inside a month. */
 function dayMark(date: string) {
   const d = new Date(`${date}T12:00`);
@@ -239,7 +250,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                       <h3 className="day-head">{monthLabel(d.month)}</h3>
                       <ul>
                         {d.items.map((row, i) => [
-                          i === 0 || d.items[i - 1]?.date !== row.date ? (
+                          showMark(d.items, i) ? (
                             <li key={`d-${row.date}`} className="day-mark" aria-hidden="true">
                               {dayMark(row.date)}
                             </li>

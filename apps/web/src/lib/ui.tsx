@@ -159,7 +159,7 @@ export function Header({
   right?: ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-1 bg-ink/90 px-2 py-1.5 backdrop-blur">
+    <header className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-1 bg-ink px-2 py-1.5">
       {back !== undefined ? (
         <IconButton icon="back" label="Back" onClick={() => go(back)} />
       ) : (
@@ -214,48 +214,32 @@ function luminance(h: number, s: number, l: number): number {
   return 0.2126 * ch(0) + 0.7152 * ch(8) + 0.0722 * ch(4);
 }
 
-// For each hue, the lightest background (up to 42%) where white text has 4.5:1 contrast.
-const LIGHT = HUES.map((h) => {
+// For each colour, a background and a letter colour with at least 4.5:1 contrast.
+// White letters on the darkest shade that passes; if that shade is murky (under 38%),
+// use dark letters on a light shade instead, so yellow and teal stay bright.
+const SWATCH = HUES.map((h) => {
+  const hue = h < 0 ? 215 : h;
+  const sat = h < 0 ? 0.12 : 0.65;
+  const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   let l = 50;
-  while (l > 20 && 1.05 / (luminance(h, h < 0 ? 0.12 : 0.65, l / 100) + 0.05) < 4.5) l -= 1;
-  return l;
+  while (l > 20 && ratio(1, luminance(hue, sat, l / 100)) < 4.5) l -= 1;
+  if (l >= 38) return { bg: `hsl(${hue} ${sat * 100}% ${l}%)`, fg: "#fff" };
+  const ink = luminance(hue, 0.6, 0.1);
+  let d = 50;
+  while (d < 80 && ratio(luminance(hue, sat, d / 100), ink) < 4.5) d += 1;
+  return { bg: `hsl(${hue} ${sat * 100}% ${d}%)`, fg: `hsl(${hue} 60% 10%)` };
 });
-
-/** A stable index from a text id (FNV-1a), for things with no position. */
-export function hashIndex(id: string): number {
-  let n = 0x811c9dc5;
-  for (const c of id) n = Math.imul(n ^ c.charCodeAt(0), 0x01000193);
-  return (n >>> 0) % 1000003;
-}
-
-/**
- * Colour slots for a set of ids: each starts at its hash and moves to the next free slot,
- * in id order, so ids on one screen do not share a colour while there are free slots.
- * Removing one id moves only ids that collided with it.
- */
-export function colourSlots(ids: string[]): Record<string, number> {
-  const used = new Set<number>();
-  const out: Record<string, number> = {};
-  for (const id of [...ids].sort()) {
-    let i = hashIndex(id) % HUES.length;
-    for (let k = 0; k < HUES.length && used.has(i); k++) i = (i + 1) % HUES.length;
-    used.add(i);
-    out[id] = i;
-  }
-  return out;
-}
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
   const n = i ?? [...name].reduce((a, c) => a + c.charCodeAt(0), 0);
-  const hue = HUES[n % HUES.length] ?? 0;
-  const light = LIGHT[n % HUES.length] ?? 36;
+  const sw = SWATCH[n % SWATCH.length] ?? { bg: "#555", fg: "#fff" };
   return (
     <span
       className={`avatar ${big ? "h-12 w-12 text-lg" : "h-10 w-10 text-sm"}`}
       style={{
-        background: hue < 0 ? `hsl(215 12% ${light}%)` : `hsl(${hue} 65% ${light}%)`,
-        color: "#fff",
+        background: sw.bg,
+        color: sw.fg,
       }}
       aria-hidden="true"
     >
@@ -427,7 +411,7 @@ export const CATEGORY_ICON: Record<string, { d: string; hue: number }> = {
   Fun: { d: "M4 8V5h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4zM10 5v10", hue: 305 },
   Shopping: { d: "M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2", hue: 280 },
   Bills: { d: "M13 3L5 14h6l-1 7 8-11h-6z", hue: 48 },
-  Rent: { d: "M3 11l9-7 9 7M5 9v11h14V9M10 20v-6h4v6", hue: 100 },
+  Rent: { d: "M3 11l9-7 9 7M5 9v11h14V9M10 20v-6h4v6", hue: -1 },
   Health: { d: "M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z", hue: 355 },
   Gifts: {
     d: "M4 10h16v4H4zM6 14h12v7H6zM12 10v11M12 10c-2-4-6-4-6-1s6 1 6 1c2-4 6-4 6-1s-6 1-6 1",
@@ -444,7 +428,7 @@ export function CategoryIcon({ c }: { c?: string }) {
     <span
       className="avatar h-10 w-10"
       style={{
-        background: hue < 0 ? "var(--color-raised-2)" : `hsl(${hue} 35% 24%)`,
+        background: hue < 0 ? "var(--color-raised-2)" : `hsl(${hue} 50% 26%)`,
         color: hue < 0 ? "var(--color-fg-2)" : `hsl(${hue} 90% 80%)`,
       }}
       aria-hidden="true"

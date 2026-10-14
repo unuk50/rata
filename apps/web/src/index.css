@@ -204,7 +204,7 @@
 }
 /* A day heading that sticks under the page header while its rows scroll. */
 @utility day-head {
-  @apply meta sticky top-14 z-[5] bg-ink px-4 pt-4 pb-2;
+  @apply sticky top-14 z-[5] bg-ink px-4 pt-6 pb-2 text-base font-bold text-fg;
 }
 /* A small day marker inside a month. It does not stick. */
 @utility day-mark {
