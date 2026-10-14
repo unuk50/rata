@@ -184,6 +184,7 @@ export class GroupSync {
       if (this.queue.length === 0 && Object.keys(this.cache.events).length === 0) {
         throw new InvalidLink();
       }
+      if (this.closed) return;
       const proto = location.protocol === "https:" ? "wss" : "ws";
       const ws = new WebSocket(
         `${proto}://${location.host}${this.base()}/ws?token=${encodeURIComponent(await this.token)}`,

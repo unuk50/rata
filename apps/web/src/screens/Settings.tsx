@@ -122,7 +122,7 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
             }}
             onBlur={() => {
               if (edited && gname.trim() && gname.trim() !== g?.name) {
-                pendingRename.current = rename().catch(() => undefined);
+                pendingRename.current = pendingRename.current.then(rename).catch(() => undefined);
               }
               setEdited(false);
             }}

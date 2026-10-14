@@ -14,15 +14,17 @@ export function Join({ code }: { code: string }) {
 
   useEffect(() => {
     if (!secret) return;
+    let active = true;
     void storage.groups().then((all) => {
       const g = all.find((x) => x.gid === secret.gid);
-      if (g?.me) {
+      if (active && g?.me) {
         joined.current = true;
         go(`/g/${secret.gid}`);
       }
     });
     // Leaving without a pick: stop syncing a group that is not on this device.
     return () => {
+      active = false;
       if (!joined.current) dropSync(secret.gid);
     };
   }, [secret]);
