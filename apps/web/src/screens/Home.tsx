@@ -49,7 +49,9 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
       if (curs.length === 1 && curs[0] === cur) {
         return { kind, v: bal[cur]?.[g.me] ?? 0, c: cur };
       }
-      const conv = rates ? convertBalances(bal, cur, rates) : null;
+      // Only currencies with open balances need a rate.
+      const open = Object.fromEntries(curs.map((c) => [c, bal[c] ?? {}]));
+      const conv = rates ? convertBalances(open, cur, rates) : null;
       return conv ? { kind, v: conv[g.me] ?? 0, c: cur } : { kind, v: null, c: cur, why: "rates" };
     }
   }, [groups, rates]);
