@@ -65,7 +65,18 @@ async function shot(screen, what, { fullPage = false, obs = [] } = {}) {
     });
   }
   await page.waitForTimeout(350);
-  await page.screenshot({ path: join(OUT, file), fullPage });
+  if (fullPage) {
+    // Chromium draws fixed bars at the viewport bottom, mid-page. Grow the viewport to the
+    // page height so fixed bars sit at the true bottom, as a user sees them after scrolling.
+    const vp = page.viewportSize();
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewportSize({ width: vp.width, height: Math.max(vp.height, height) });
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: join(OUT, file) });
+    await page.setViewportSize(vp);
+  } else {
+    await page.screenshot({ path: join(OUT, file) });
+  }
   const route = await page.evaluate(() => location.hash || "#/");
   manifest.push({ file, journey, screen, route, what_it_shows: what, observations: [...obs] });
   console.log(`${file}  ${route}`);
