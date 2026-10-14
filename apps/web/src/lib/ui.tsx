@@ -73,10 +73,24 @@ export function zero(cur: string): string {
   return (0).toFixed(currencyExponent(cur));
 }
 
-export function Money({ v, c, signed }: { v: number; c: string; signed?: boolean }) {
-  if (!signed) return <span className="num">{formatMoney(v, c)}</span>;
+/**
+ * An amount. `signed` adds + or − and the owed/owes colour.
+ * `tone` keeps the colour but drops the sign, for places where a label already says the direction.
+ */
+export function Money({
+  v,
+  c,
+  signed,
+  tone,
+}: {
+  v: number;
+  c: string;
+  signed?: boolean;
+  tone?: boolean;
+}) {
+  if (!signed && !tone) return <span className="num">{formatMoney(v, c)}</span>;
   const cls = v > 0 ? "text-owed" : v < 0 ? "text-owes" : "text-muted";
-  const sign = v > 0 ? "+" : v < 0 ? "\u2212" : "";
+  const sign = tone ? "" : v > 0 ? "+" : v < 0 ? "\u2212" : "";
   return (
     <span className={`num ${cls}`}>
       {sign}
@@ -95,6 +109,9 @@ const ICONS = {
   check: "M20 6L9 17l-5-5",
   arrow: "M5 12h14M13 6l6 6-6 6",
   plus: "M12 5v14M5 12h14",
+  wifiOff:
+    "M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5.2-2.8M19 13a10 10 0 0 0-2.4-1.6M12 20h.01",
+  link: "M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1",
   x: "M18 6L6 18M6 6l12 12",
 } as const;
 
@@ -243,6 +260,31 @@ export function PeoplePicker({
         })}
       </div>
     </fieldset>
+  );
+}
+
+/** A full-screen message with a way out, so no screen is a dead end. */
+export function Notice({
+  icon = "x",
+  text,
+  action = "Home",
+  to = "/",
+}: {
+  icon?: keyof typeof ICONS;
+  text: string;
+  action?: string;
+  to?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-5 pt-16 text-center">
+      <span className="flex h-16 w-16 items-center justify-center border border-line-strong text-fg-2">
+        <Icon name={icon} size={32} />
+      </span>
+      <p className="max-w-72 text-lg font-bold">{text}</p>
+      <button type="button" className="btn-secondary" onClick={() => go(to)}>
+        {action}
+      </button>
+    </div>
   );
 }
 

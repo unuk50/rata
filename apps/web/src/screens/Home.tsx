@@ -1,12 +1,42 @@
-import { decodeInvite } from "@rata/core";
-import { useState } from "react";
-import { go, useGroups } from "../lib/hooks";
-import { Avatar, Icon } from "../lib/ui";
+import { balances, convertBalances, decodeInvite, foldEvents, type Rates } from "@rata/core";
+import { useEffect, useState } from "react";
+import { go, useGroups, useRates } from "../lib/hooks";
+import { type SavedGroup, storage } from "../lib/storage";
+import { Avatar, Icon, Money } from "../lib/ui";
+
+/** My net in each group, in the group currency. Null when it needs rates that are not here. */
+function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
+  const [nets, setNets] = useState<Record<string, { v: number; c: string } | null>>({});
+  useEffect(() => {
+    if (!groups) return;
+    void Promise.all(
+      groups.map(async (g) => {
+        const state = foldEvents(Object.values((await storage.cache(g.gid)).events));
+        const cur = state.group?.currency ?? "USD";
+        const bal = balances(state);
+        const curs = Object.keys(bal).filter((c) => Object.values(bal[c] ?? {}).some((v) => v));
+        if (!g.me) return [g.gid, null] as const;
+        if (curs.length === 0) return [g.gid, { v: 0, c: cur }] as const;
+        if (curs.length === 1 && curs[0] === cur) {
+          return [g.gid, { v: bal[cur]?.[g.me] ?? 0, c: cur }] as const;
+        }
+        if (!rates) return [g.gid, null] as const;
+        const conv = convertBalances(bal, cur, rates);
+        return [g.gid, conv ? { v: conv[g.me] ?? 0, c: cur } : null] as const;
+      }),
+    ).then((rows) => setNets(Object.fromEntries(rows)));
+  }, [groups, rates]);
+  return nets;
+}
 
 export function Home() {
   const [groups] = useGroups();
+  const rates = useRates();
+  const nets = useMyNets(groups, (rates?.rates as Rates) ?? null);
   const [link, setLink] = useState("");
   const [err, setErr] = useState("");
+  const [about, setAbout] = useState(false);
+  const [pasting, setPasting] = useState(false);
 
   const join = () => {
     const s = decodeInvite(link);
@@ -19,11 +49,24 @@ export function Home() {
       <div className="flex items-center gap-3">
         <img src="/icon.svg" alt="" className="h-11 w-11" />
         <h1 className="title flex-1">rata</h1>
-        <span className="caps flex items-center gap-1.5" title="Encrypted on your device">
+        <button
+          type="button"
+          className="caps flex min-h-11 items-center gap-1.5 px-1"
+          aria-expanded={about}
+          onClick={() => setAbout(!about)}
+        >
           <Icon name="lock" size={14} />
           Private
-        </span>
+        </button>
       </div>
+
+      {about && (
+        <ul className="card space-y-2 p-4 text-sm text-fg-2">
+          <li>Your phone locks each entry before it leaves.</li>
+          <li>Only people with the invite link can read the group.</li>
+          <li>No account. No ads. No tracking.</li>
+        </ul>
+      )}
 
       {groups && groups.length === 0 && (
         <p className="text-[34px] leading-[1.05] font-extrabold tracking-tight">
@@ -47,9 +90,7 @@ export function Home() {
                 >
                   <Avatar name={g.name} />
                   <span className="min-w-0 flex-1 truncate text-lg font-bold">{g.name}</span>
-                  <span className="text-muted">
-                    <Icon name="arrow" />
-                  </span>
+                  <GroupNet n={nets[g.gid]} />
                 </button>
               </li>
             ))}
@@ -60,29 +101,36 @@ export function Home() {
         <Icon name="plus" size={18} /> New group
       </button>
 
-      <div>
-        <div className="flex gap-2">
-          <input
-            id="invite"
-            className="field min-w-0"
-            placeholder="Paste an invite link"
-            aria-label="Invite link"
-            value={link}
-            onChange={(e) => {
-              setLink(e.target.value);
-              setErr("");
-            }}
-          />
-          <button type="button" className="btn-secondary" disabled={!link.trim()} onClick={join}>
-            Join
-          </button>
+      {pasting ? (
+        <div>
+          <div className="flex gap-2">
+            <input
+              id="invite"
+              className="field min-w-0"
+              placeholder="Paste an invite link"
+              aria-label="Invite link"
+              value={link}
+              onChange={(e) => {
+                setLink(e.target.value);
+                setErr("");
+              }}
+              autoFocus
+            />
+            <button type="button" className="btn-secondary" disabled={!link.trim()} onClick={join}>
+              Join
+            </button>
+          </div>
+          {err && <p className="mt-1 text-sm text-owes">{err}</p>}
         </div>
-        {err && <p className="mt-1 text-sm text-owes">{err}</p>}
-      </div>
+      ) : (
+        <button type="button" className="btn-ghost w-full" onClick={() => setPasting(true)}>
+          <Icon name="link" size={18} /> Have an invite link?
+        </button>
+      )}
 
-      <p className="text-center text-xs text-faint">
+      <p className="text-center text-xs text-muted">
         <a
-          className="underline"
+          className="inline-flex min-h-11 items-center underline"
           href="https://github.com/unuk50/rata"
           target="_blank"
           rel="noreferrer"
@@ -92,5 +140,23 @@ export function Home() {
         </a>
       </p>
     </div>
+  );
+}
+
+function GroupNet({ n }: { n: { v: number; c: string } | null | undefined }) {
+  if (!n)
+    return (
+      <span className="text-muted">
+        <Icon name="arrow" />
+      </span>
+    );
+  if (n.v === 0) return <span className="caps">Square</span>;
+  return (
+    <span className="text-right">
+      <span className="caps block">{n.v > 0 ? "You get" : "You owe"}</span>
+      <span className="font-extrabold">
+        <Money v={n.v} c={n.c} tone />
+      </span>
+    </span>
   );
 }

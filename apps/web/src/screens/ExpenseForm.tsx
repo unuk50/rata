@@ -1,4 +1,5 @@
 import {
+  allocate,
   type ExpenseEvent,
   formatMoney,
   type GroupSecret,
@@ -17,6 +18,7 @@ import {
   CATEGORIES,
   CURRENCIES,
   Header,
+  Notice,
   PeoplePicker,
   TabPanel,
   Tabs,
@@ -160,6 +162,28 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     }
   })();
 
+  /** Start each method with an even split, so the form does not open on an error. */
+  const pickMethod = (m: SplitMethod) => {
+    setMethod(m);
+    if (m === "equal" || (existing && existing.split.method === m)) return;
+    const ids = members.filter((x) => inSplit[x.mid]).map((x) => x.mid);
+    const who = ids.length ? ids : members.map((x) => x.mid);
+    const even = (n: number) =>
+      allocate(
+        n,
+        who.map(() => 1),
+      );
+    const vals =
+      m === "shares"
+        ? who.map(() => "1")
+        : m === "percent"
+          ? even(10000).map((v) => String(v / 100))
+          : total
+            ? even(total).map((v) => amountInput(v, cur))
+            : who.map(() => "");
+    setParts(Object.fromEntries(who.map((mid, i) => [mid, vals[i] ?? ""])));
+  };
+
   const save = async () => {
     const e = build();
     if (typeof e === "string") return setError(e);
@@ -186,7 +210,12 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     return (
       <div>
         <Header title="Expense" back={`/g/${saved.gid}`} />
-        <p className="text-muted">This expense was deleted.</p>
+        <Notice
+          icon="x"
+          text="This expense was deleted."
+          action="Back to group"
+          to={`/g/${saved.gid}`}
+        />
       </div>
     );
   }
@@ -291,7 +320,7 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         <section>
           <h2 className="caps mb-2">Split</h2>
           <div className="mb-3">
-            <Tabs id="split" options={METHODS} value={method} onChange={setMethod} />
+            <Tabs id="split" options={METHODS} value={method} onChange={pickMethod} />
           </div>
           <TabPanel id="split" value={method}>
             {method === "equal" ? (
@@ -324,9 +353,11 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                         onChange={(e) => setParts({ ...parts, [m.mid]: e.target.value })}
                         aria-label={`${m.name} ${method}`}
                       />
-                      <span className="num w-20 shrink-0 text-right text-sm text-muted">
-                        {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "0"}
-                      </span>
+                      {method !== "exact" && (
+                        <span className="num w-20 shrink-0 text-right text-sm text-muted">
+                          {preview?.[m.mid] ? formatMoney(preview[m.mid] ?? 0, cur) : "—"}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

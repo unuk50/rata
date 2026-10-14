@@ -2,7 +2,16 @@ import { type GroupSecret, newId, parseAmount } from "@rata/core";
 import { useEffect, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { amountInput, CURRENCIES, Header, Icon, PeoplePicker, today, zero } from "../lib/ui";
+import {
+  amountInput,
+  CURRENCIES,
+  Header,
+  Icon,
+  Notice,
+  PeoplePicker,
+  today,
+  zero,
+} from "../lib/ui";
 
 export function Settle({
   saved,
@@ -71,7 +80,12 @@ export function Settle({
     return (
       <div>
         <Header title="Payment" back={`/g/${saved.gid}`} />
-        <p className="text-muted">This payment was deleted.</p>
+        <Notice
+          icon="x"
+          text="This payment was deleted."
+          action="Back to group"
+          to={`/g/${saved.gid}`}
+        />
       </div>
     );
   }
@@ -90,6 +104,30 @@ export function Settle({
         }
       />
       <div className="space-y-6">
+        <div className="card flex items-center gap-2 p-3">
+          <select
+            className="field w-24 shrink-0 font-extrabold"
+            value={cur}
+            onChange={(e) => setCurrency(e.target.value)}
+            aria-label="Currency"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+          <input
+            className="amount"
+            inputMode="decimal"
+            placeholder={zero(cur)}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            onBlur={() => {
+              const v = parseAmount(amount, cur);
+              if (v) setAmount(amountInput(v, cur));
+            }}
+            aria-label="Amount"
+          />
+        </div>
         <section>
           <h2 className="caps mb-2">From</h2>
           <PeoplePicker
@@ -116,30 +154,6 @@ export function Settle({
             onToggle={setTo}
           />
         </section>
-        <div className="card flex items-center gap-2 p-3">
-          <select
-            className="field w-24 shrink-0 font-extrabold"
-            value={cur}
-            onChange={(e) => setCurrency(e.target.value)}
-            aria-label="Currency"
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-          <input
-            className="amount"
-            inputMode="decimal"
-            placeholder={zero(cur)}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            onBlur={() => {
-              const v = parseAmount(amount, cur);
-              if (v) setAmount(amountInput(v, cur));
-            }}
-            aria-label="Amount"
-          />
-        </div>
         <p className="caps text-center">Records only. No money moves.</p>
       </div>
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">

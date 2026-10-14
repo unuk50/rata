@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { go, useGroup } from "../lib/hooks";
 import { storage } from "../lib/storage";
 import { dropSync } from "../lib/sync";
-import { Avatar, Header, Icon } from "../lib/ui";
+import { Avatar, Header, Icon, Notice } from "../lib/ui";
 
 export function Join({ code }: { code: string }) {
   const secret = useMemo(() => decodeInvite(code), [code]);
   const { state, status, sync } = useGroup(secret);
   const [name, setName] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const joined = useRef(false);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export function Join({ code }: { code: string }) {
     return (
       <div>
         <Header title="Invite" back="/" />
-        <p>This invite link is not complete. Ask for a new link.</p>
+        <Notice icon="link" text="This invite link is not complete. Ask for a new one." />
       </div>
     );
   }
@@ -63,17 +64,15 @@ export function Join({ code }: { code: string }) {
   };
 
   const problem =
-    status === "invalid"
-      ? "This link does not work. Ask for a new one."
-      : status === "offline" && !state.group
-        ? "You are offline. Open the link again when you are online."
-        : null;
+    status === "invalid" ? "invalid" : status === "offline" && !state.group ? "offline" : null;
 
   return (
     <div>
       <Header title={state.group ? `Join ${state.group.name}` : "Join group"} back="/" />
-      {problem ? (
-        <p className="card p-5 font-bold">{problem}</p>
+      {problem === "invalid" ? (
+        <Notice icon="link" text="This link does not work. Ask for a new one." />
+      ) : problem === "offline" ? (
+        <Notice icon="wifiOff" text="You are offline. Open the link again when you are online." />
       ) : !state.group ? (
         <p className="text-muted">Opening…</p>
       ) : (
@@ -83,9 +82,13 @@ export function Join({ code }: { code: string }) {
             <ul className="card divider">
               {state.members.map((m, i) => (
                 <li key={m.mid}>
-                  <button type="button" className="row hover:bg-raised" onClick={() => pick(m.mid)}>
-                    <Avatar name={m.name} i={i} />
-                    <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
+                  <button
+                    type="button"
+                    className="row min-h-16 hover:bg-raised"
+                    onClick={() => pick(m.mid)}
+                  >
+                    <Avatar name={m.name} i={i} big />
+                    <span className="min-w-0 flex-1 truncate text-lg font-bold">{m.name}</span>
                     <span className="text-muted">
                       <Icon name="arrow" />
                     </span>
@@ -94,28 +97,35 @@ export function Join({ code }: { code: string }) {
               ))}
             </ul>
           </div>
-          <div className="card space-y-2 p-4">
-            <label className="label" htmlFor="newname">
-              Not listed? Add yourself
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="newname"
-                className="field min-w-0"
-                value={draft}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-              />
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!draft.trim()}
-                onClick={addMe}
-              >
-                Join
-              </button>
+          {adding ? (
+            <div className="card space-y-2 p-4">
+              <label className="label" htmlFor="newname">
+                Your name
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="newname"
+                  className="field min-w-0"
+                  value={draft}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={!draft.trim()}
+                  onClick={addMe}
+                >
+                  Join
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <button type="button" className="btn-ghost w-full" onClick={() => setAdding(true)}>
+              <Icon name="plus" size={18} /> Not listed? Add yourself
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -10,7 +10,17 @@ import {
 import { useState } from "react";
 import { go, useGroup, useRates } from "../lib/hooks";
 import type { SavedGroup } from "../lib/storage";
-import { Avatar, Header, Icon, IconButton, Money, StatusDot, TabPanel, Tabs } from "../lib/ui";
+import {
+  Avatar,
+  Header,
+  Icon,
+  IconButton,
+  Money,
+  Notice,
+  StatusDot,
+  TabPanel,
+  Tabs,
+} from "../lib/ui";
 
 type Tab = "expenses" | "balances";
 
@@ -57,9 +67,13 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   const myNets = netOf(me ?? "");
   const allPos = myNets.length > 0 && myNets.every(([, v]) => v > 0);
   const allNeg = myNets.length > 0 && myNets.every(([, v]) => v < 0);
-  const heroLabel =
-    myNets.length === 0
-      ? "All settled"
+  const empty = state.expenses.length === 0 && state.payments.length === 0;
+  const heroLabel = empty
+    ? "No expenses yet"
+    : myNets.length === 0
+      ? plan.length === 0
+        ? "All settled"
+        : "You're square"
       : allPos
         ? "You're owed"
         : allNeg
@@ -74,6 +88,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
   const settleLink = (t: Transfer) =>
     `/g/${saved.gid}/settle/${t.from}/${t.to}/${t.amount}/${t.currency}`;
   const myDebt = plan.find((t) => t.from === me);
+  const isMine = (t: Transfer) => t.from === me || t.to === me;
 
   const rows = [
     ...state.expenses.map((e) => ({ kind: "e" as const, date: e.date, ts: e.ts, e })),
@@ -105,39 +120,48 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
       />
 
       {!g ? (
-        <p className="text-muted">
-          {status === "offline"
-            ? "Offline. Not loaded yet."
-            : status === "invalid"
-              ? "This group is not on the server."
-              : "Loading…"}
-        </p>
+        status === "invalid" ? (
+          <Notice icon="link" text="This group is not on the server. Ask for a new invite link." />
+        ) : status === "offline" ? (
+          <Notice icon="wifiOff" text="You are offline. This group opens when you are online." />
+        ) : (
+          <p className="text-muted">Loading…</p>
+        )
       ) : (
         <>
-          <button
-            type="button"
-            className="card pop mb-5 block w-full p-5 text-left"
-            style={{ "--edge": edge } as React.CSSProperties}
-            onClick={() => setTab("balances")}
-          >
-            {myNets.length === 0 ? (
-              <div className="flex items-center gap-3 text-2xl font-extrabold text-fg-2">
-                <Icon name="check" size={28} /> {heroLabel}
-              </div>
-            ) : (
-              <>
-                <div className="caps mb-1">{heroLabel}</div>
-                {myNets.map(([c, v]) => (
-                  <div
-                    key={c}
-                    className="truncate text-[clamp(1.75rem,9vw,3rem)] leading-tight font-extrabold tracking-tight"
-                  >
-                    <Money v={v} c={c} signed />
+          {!empty && (
+            <button
+              type="button"
+              className="card pop mb-5 block w-full p-5 text-left"
+              style={{ "--edge": edge } as React.CSSProperties}
+              onClick={() => setTab("balances")}
+            >
+              {myNets.length === 0 ? (
+                <>
+                  <div className="flex items-center gap-3 text-2xl font-extrabold text-fg-2">
+                    {!empty && <Icon name="check" size={28} />} {heroLabel}
                   </div>
-                ))}
-              </>
-            )}
-          </button>
+                  {!empty && plan.length > 0 && (
+                    <div className="caps mt-2">
+                      {plan.length} {plan.length === 1 ? "payment" : "payments"} open in the group
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="caps mb-1">{heroLabel}</div>
+                  {myNets.map(([c, v], i) => (
+                    <div
+                      key={c}
+                      className={`truncate leading-tight font-extrabold tracking-tight ${i === 0 ? "text-[clamp(1.75rem,9vw,3rem)]" : "text-xl"}`}
+                    >
+                      <Money v={v} c={c} signed={!allPos && !allNeg} tone={allPos || allNeg} />
+                    </div>
+                  ))}
+                </>
+              )}
+            </button>
+          )}
 
           <div className="mb-4">
             <Tabs
@@ -243,31 +267,32 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                     <p className="card p-5 text-center font-bold text-muted">All settled</p>
                   ) : (
                     <ul className="card divider">
-                      {plan.map((t) => {
-                        const mine = t.from === me || t.to === me;
-                        return (
-                          <li
-                            key={`${t.from}-${t.to}-${t.currency}`}
-                            className={`row ${mine ? "" : "opacity-70"}`}
-                          >
-                            <Avatar name={realName(t.from)} i={idx(t.from)} />
-                            <div className="min-w-0 flex-1">
-                              <Pair from={name(t.from)} to={name(t.to)} />
-                              <div className="truncate text-lg font-extrabold">
-                                <Money v={t.amount} c={t.currency} />
+                      {[...plan]
+                        .sort((a, b) => Number(isMine(b)) - Number(isMine(a)))
+                        .map((t) => {
+                          const mine = t.from === me || t.to === me;
+                          return (
+                            <li key={`${t.from}-${t.to}-${t.currency}`} className="row">
+                              <Avatar name={realName(t.from)} i={idx(t.from)} />
+                              <div className={`min-w-0 flex-1 ${mine ? "" : "text-fg-2"}`}>
+                                <Pair from={name(t.from)} to={name(t.to)} />
+                                <div
+                                  className={`truncate text-lg ${mine ? "font-extrabold" : "font-semibold"}`}
+                                >
+                                  <Money v={t.amount} c={t.currency} />
+                                </div>
                               </div>
-                            </div>
-                            <button
-                              type="button"
-                              className={`${mine ? "btn-primary" : "btn-secondary"} btn-sm`}
-                              aria-label={`${name(t.from)} paid ${name(t.to)}`}
-                              onClick={() => go(settleLink(t))}
-                            >
-                              Paid
-                            </button>
-                          </li>
-                        );
-                      })}
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                aria-label={`Mark paid: ${name(t.from)} to ${name(t.to)}`}
+                                onClick={() => go(settleLink(t))}
+                              >
+                                Mark paid
+                              </button>
+                            </li>
+                          );
+                        })}
                     </ul>
                   )}
                 </section>
@@ -280,7 +305,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => go(myDebt ? settleLink(myDebt) : `/g/${saved.gid}/settle`)}
+                onClick={() => (myDebt ? go(settleLink(myDebt)) : setTab("balances"))}
               >
                 Settle up
               </button>
@@ -314,10 +339,15 @@ function MyShare({
     owed = 0;
   }
   const net = (e.paidBy[me] ?? 0) - owed;
-  if (net === 0) return <span className="text-sm text-faint">—</span>;
+  const inIt = owed > 0 || (e.paidBy[me] ?? 0) > 0;
+  if (!inIt) return <span className="caps text-faint">Not in it</span>;
+  if (net === 0) return <span className="caps">Even</span>;
   return (
-    <span className="text-sm font-extrabold">
-      <Money v={net} c={e.currency} signed />
+    <span className="text-right">
+      <span className="caps block">{net > 0 ? "You get" : "You owe"}</span>
+      <span className="text-sm font-extrabold">
+        <Money v={net} c={e.currency} tone />
+      </span>
     </span>
   );
 }

@@ -49,7 +49,16 @@ export class GroupSync {
     this.refold();
     this.connect();
     window.addEventListener("online", this.onOnline);
+    window.addEventListener("offline", this.onOffline);
   }
+
+  /** Show Offline at once. The socket can stay "open" for a while after the network drops. */
+  private onOffline = () => {
+    const ws = this.ws;
+    this.ws = null;
+    ws?.close();
+    this.setStatus("offline");
+  };
 
   private onOnline = () => {
     this.retry = 0;
@@ -217,6 +226,7 @@ export class GroupSync {
   close() {
     this.closed = true;
     window.removeEventListener("online", this.onOnline);
+    window.removeEventListener("offline", this.onOffline);
     if (this.timer) clearTimeout(this.timer);
     this.ws?.close();
   }

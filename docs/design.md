@@ -39,8 +39,11 @@ Font: **Manrope** (variable, SIL Open Font License), self-hosted. Weights: 800 f
 9. **Minimal text.** Labels have 1 to 3 words. No paragraphs that explain how the app works; a lock icon with "Private" says it. If a control needs a sentence of help, change the control.
 10. **Tap people, do not pick them from a list.** Use `<PeoplePicker>` for payer, split and settle. Use a `<select>` only for long lists such as currencies.
 11. **Amount first.** On money screens the amount is the biggest thing (`amount`). The main action sits in a sticky bottom bar.
-12. **Signs, not only colour.** Amounts that show direction have `+` or `−` as well as green or red.
+12. **Signs, not only colour.** Amounts that show direction have `+` or `−` as well as green or red. If a label already says the direction ("You owe"), drop the sign and keep the colour (`<Money tone>`).
 13. **Colours by position.** `<Avatar i={index}>` takes its colour from the person's place in the group, so two people in one group never share a colour.
+14. **Names, not only initials.** A row about two people shows both names ("Ananya → You"). Initials alone are not enough.
+15. **No dead ends.** An error or empty page uses `<Notice>`: one icon, one line, one way out.
+16. **Actions say what they do.** Use a verb: "Mark paid", not "Paid". Only the main action of a screen is the accent button.
 
 ## Components
 

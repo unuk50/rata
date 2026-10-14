@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRoute } from "./lib/hooks";
 import { type SavedGroup, storage } from "./lib/storage";
+import { Notice } from "./lib/ui";
 import { ExpenseForm } from "./screens/ExpenseForm";
 import { Group } from "./screens/Group";
 import { Home } from "./screens/Home";
@@ -24,12 +25,7 @@ function WithGroup({
   if (g === undefined) return null;
   if (g === null) {
     return (
-      <div className="pt-10 text-center">
-        <p className="mb-4">This group is not on this device. Open its invite link to join.</p>
-        <a className="btn-primary" href="#/">
-          Home
-        </a>
-      </div>
+      <Notice icon="link" text="This group is not on this device. Open its invite link to join." />
     );
   }
   return <>{children(g)}</>;
