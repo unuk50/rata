@@ -116,7 +116,7 @@ export function Home() {
                   <span className="relative flex h-10 w-10 shrink-0 items-center justify-center border border-line-strong text-lg font-extrabold">
                     {g.name.trim().charAt(0).toUpperCase() || "?"}
                     <span
-                      className="absolute -right-2 -bottom-2 text-sm leading-none"
+                      className="absolute -right-1.5 -bottom-1.5 bg-ink text-sm leading-none"
                       aria-hidden="true"
                     >
                       {KINDS.find((k) => k.id === nets[g.gid]?.kind)?.emoji ?? KINDS[3].emoji}
@@ -180,13 +180,12 @@ function GroupNet({ n }: { n: Net | undefined }) {
   if (n?.why === "new") return <span className="caps text-faint">New</span>;
   if (n?.why === "rates")
     return (
-      <span className="text-faint" title="Needs exchange rates">
-        <Icon name="wifiOff" size={18} />
-        <span className="sr-only">Needs exchange rates</span>
+      <span className="caps text-faint" title="Needs exchange rates">
+        No rates
       </span>
     );
   if (!n || n.v === null) return null;
-  if (n.v === 0) return <span className="caps text-owed">Square</span>;
+  if (n.v === 0) return <span className="caps text-owed">Settled</span>;
   return (
     <span className="text-right">
       <span className="caps block">{n.v > 0 ? "You get" : "You owe"}</span>

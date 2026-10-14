@@ -56,7 +56,8 @@ export function App() {
   return (
     <main className="mx-auto max-w-xl px-4">
       {view}
-      <ToastBar />
+      {/* Screens with a fixed bottom bar: the toast sits above it. */}
+      <ToastBar raised={a === "g" && !!b && (!c || ["add", "e", "settle", "p"].includes(c))} />
     </main>
   );
 }

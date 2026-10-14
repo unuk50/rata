@@ -76,12 +76,14 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
     : myNets.length === 0
       ? plan.length === 0
         ? "All settled"
-        : "You're square"
+        : "You're settled"
       : allPos
         ? "You're owed"
         : allNeg
           ? "You owe"
-          : "Your balance";
+          : perCurrency
+            ? "Your balance · no rates to combine"
+            : "Your balance";
   const settled = !empty && myNets.length === 0 && plan.length === 0;
   const edge =
     allPos || settled
@@ -164,9 +166,7 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                     {!empty && <Icon name="check" size={28} />} {heroLabel}
                   </div>
                   {!empty && plan.length > 0 && (
-                    <div className="caps mt-2">
-                      {plan.length} {plan.length === 1 ? "payment" : "payments"} open in the group
-                    </div>
+                    <div className="caps mt-2">{plan.length} open between others</div>
                   )}
                 </>
               ) : (
@@ -341,7 +341,8 @@ export function Group({ saved }: { saved: SavedGroup & GroupSecret }) {
                 className="btn-secondary min-w-0"
                 disabled={plan.length === 0}
                 onClick={() => {
-                  if (myDebt) return go(settleLink(myDebt));
+                  const mine = myDebt ?? myCredits[0];
+                  if (mine) return go(settleLink(mine));
                   setTab("balances");
                   setTimeout(
                     () =>
@@ -392,13 +393,11 @@ function MyShare({
   const inIt = (e.split.parts[me] ?? 0) > 0 || (e.paidBy[me] ?? 0) > 0;
   if (!inIt) return <span className="caps text-faint">Not in it</span>;
   if (net === 0) return <span className="caps">Even</span>;
-  // History, not a debt now: a neutral colour, with + or − for your side of this expense.
+  // History, not a debt now: neutral colours, one short word for your side of this expense.
   return (
-    <span className="text-right">
-      <span className="caps block text-faint">{net > 0 ? "You lent" : "You borrowed"}</span>
-      <span className="num text-sm font-bold text-fg-2">
-        {formatMoney(Math.abs(net), e.currency)}
-      </span>
+    <span className={`num shrink-0 text-sm ${net > 0 ? "font-bold text-fg-2" : "text-faint"}`}>
+      <span className="text-xs">{net > 0 ? "lent " : "owe "}</span>
+      {formatMoney(Math.abs(net), e.currency)}
     </span>
   );
 }

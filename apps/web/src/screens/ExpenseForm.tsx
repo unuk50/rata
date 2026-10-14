@@ -1,5 +1,6 @@
 import {
   allocate,
+  currencyExponent,
   type ExpenseEvent,
   formatMoney,
   type GroupSecret,
@@ -34,6 +35,16 @@ const METHODS: { id: SplitMethod; label: string }[] = [
   { id: "percent", label: "%" },
   { id: "shares", label: "Shares" },
 ];
+
+/** Say why an amount does not parse: too many decimals for the currency, or not a number. */
+function amountError(text: string, cur: string): string {
+  if (!text.trim()) return "Enter an amount.";
+  const dec = text.trim().split(".")[1];
+  const exp = currencyExponent(cur);
+  if (dec !== undefined && /^\d+$/.test(dec) && dec.length > exp)
+    return exp === 0 ? `${cur} has no decimals.` : `${cur} has ${exp} decimals.`;
+  return "Enter a valid amount.";
+}
 
 export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; eid?: string }) {
   const { state, sync } = useGroup(saved);
@@ -103,8 +114,10 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
   const cur = currency || group?.currency || "USD";
   const total = parseAmount(amount, cur);
 
+  const paidSoFar = Object.values(multiPay).reduce((t, v) => t + (parseAmount(v, cur) ?? 0), 0);
+
   const build = (): ExpenseEvent | string => {
-    if (total === null) return "Enter a valid amount.";
+    if (total === null) return amountError(amount, cur);
     let paidBy: Record<string, number>;
     if (payer === "*") {
       paidBy = {};
@@ -134,7 +147,9 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
         n < 0 ||
         (method === "shares" && !Number.isInteger(n))
       )
-        return `Check the value for ${m.name}.`;
+        return method === "shares"
+          ? `Shares are whole numbers (${m.name}).`
+          : `Check the value for ${m.name}.`;
       if (n > 0) p[m.mid] = n;
     }
     return {
@@ -370,6 +385,11 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
                   />
                 </div>
               ))}
+              {total !== null && (
+                <div className="caps p-2 text-right">
+                  Paid {formatMoney(paidSoFar, cur)} of {formatMoney(total, cur)}
+                </div>
+              )}
             </div>
           )}
         </section>

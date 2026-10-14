@@ -208,7 +208,7 @@ export function StatusDot({ status, pending }: { status: SyncStatus; pending: nu
 
 // No greens or reds: those mean money owed and money due.
 // Ten hues far apart, with no green, red or lime-yellow (those mean owed, owes and selected).
-const HUES = [24, 225, 300, 185, 265, 38, 330, 205, 280, 172];
+const HUES = [24, 200, 290, 235, 330, 175, 50, 265, 310, 215];
 
 /** Colour by position in the group, so people in one group never share a colour. */
 export function Avatar({ name, i, big }: { name: string; i?: number; big?: boolean }) {
@@ -305,12 +305,14 @@ export function PeoplePicker({
 }
 
 /** The message bar from toast(). Sits above the bottom action bar. */
-export function ToastBar() {
+export function ToastBar({ raised }: { raised: boolean }) {
   const t = useToast();
   if (!t) return null;
   return (
-    <output className="fixed inset-x-0 bottom-24 z-20 block px-4">
-      <div className="mx-auto flex max-w-xl items-center gap-3 bg-fg px-4 py-2 text-ink shadow-[0_8px_24px_rgb(0_0_0/0.6)]">
+    <output
+      className={`fixed inset-x-0 z-20 block px-4 ${raised ? "bottom-24" : "bottom-[max(1rem,env(safe-area-inset-bottom))]"}`}
+    >
+      <div className="mx-auto flex max-w-xl items-center gap-3 border-2 border-ink bg-white px-4 py-2 text-ink outline outline-1 outline-line-strong">
         <span className="min-w-0 flex-1 truncate text-sm font-bold">{t.text}</span>
         {t.action && (
           <button
