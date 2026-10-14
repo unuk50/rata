@@ -208,7 +208,8 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
     if (typeof e === "string") return setError(e);
     const v = validateExpense(e);
     if (v) return setError(v);
-    await sync?.add([e]);
+    if (!sync) return setError("Still loading. Try again.");
+    await sync.add([e]);
     go(`/g/${saved.gid}`);
     toast(existing ? "Saved" : `Added “${e.desc}”`);
   };
@@ -276,9 +277,29 @@ export function ExpenseForm({ saved, eid }: { saved: SavedGroup & GroupSecret; e
             value={cur}
             onChange={(e) => {
               const to = e.target.value;
-              const conv = (vals: Record<string, string>) =>
-                Object.fromEntries(Object.entries(vals).map(([k, v]) => [k, reAmount(v, cur, to)]));
-              setAmount(reAmount(amount, cur, to));
+              const newAmount = reAmount(amount, cur, to);
+              const newTotal = parseAmount(newAmount, to);
+              // Spread the new total in the same proportions, so rounding cannot unbalance the parts.
+              const conv = (vals: Record<string, string>) => {
+                const keys = Object.keys(vals).filter((k) => vals[k]?.trim());
+                const old = keys.map((k) => parseAmount(vals[k] ?? "", cur) ?? 0);
+                const balanced = old.reduce((x, y) => x + y, 0) === parseAmount(amount, cur);
+                if (
+                  newTotal === null ||
+                  !balanced ||
+                  old.some((v) => v < 0) ||
+                  old.every((v) => !v)
+                )
+                  return Object.fromEntries(
+                    Object.entries(vals).map(([k, v]) => [k, reAmount(v, cur, to)]),
+                  );
+                const shares = allocate(newTotal, old);
+                return {
+                  ...vals,
+                  ...Object.fromEntries(keys.map((k, i) => [k, amountInput(shares[i] ?? 0, to)])),
+                };
+              };
+              setAmount(newAmount);
               setMultiPay(conv(multiPay));
               if (method === "exact") setParts(conv(parts));
               setCurrency(to);

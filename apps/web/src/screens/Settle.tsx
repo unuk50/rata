@@ -57,7 +57,8 @@ export function Settle({
     if (!v || v <= 0) return setError("Enter an amount.");
     if (!toId) return setError("Add someone to pay first.");
     if (from === toId) return setError("Pick two different people.");
-    await sync?.add([
+    if (!sync) return setError("Still loading. Try again.");
+    await sync.add([
       {
         t: "payment",
         id: newId(),
@@ -72,7 +73,11 @@ export function Settle({
       },
     ]);
     go(`/g/${saved.gid}`);
-    toast(existing ? "Payment saved" : `Paid ${who(toId)} ${formatMoney(v, cur)}`);
+    toast(
+      existing
+        ? "Payment saved"
+        : `${from === saved.me ? "You" : who(from)} paid ${who(toId)} ${formatMoney(v, cur)}`,
+    );
   };
 
   const remove = async () => {
@@ -173,7 +178,7 @@ export function Settle({
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-ink/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
         <div className="mx-auto max-w-xl">
           {error && <p className="mb-2 text-sm text-owes">{error}</p>}
-          <button type="button" className="btn-primary w-full" onClick={save}>
+          <button type="button" className="btn-primary w-full" onClick={save} disabled={!sync}>
             Save payment
           </button>
         </div>

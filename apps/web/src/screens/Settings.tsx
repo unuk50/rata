@@ -19,8 +19,8 @@ export function Settings({ saved }: { saved: SavedGroup & GroupSecret }) {
   }, [loadedName, edited]);
 
   const addMember = async () => {
-    if (!newName.trim()) return;
-    await sync?.add([
+    if (!sync || !newName.trim()) return;
+    await sync.add([
       {
         t: "member",
         id: newId(),

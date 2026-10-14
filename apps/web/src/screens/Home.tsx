@@ -18,9 +18,13 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
   const [nets, setNets] = useState<Record<string, Net>>({});
   useEffect(() => {
     if (!groups) return;
+    let live = true;
     void Promise.all(
       groups.map(async (g) => {
-        const state = foldEvents(Object.values((await storage.cache(g.gid)).events));
+        // One unreadable group must not hide the others.
+        const cache = await storage.cache(g.gid).catch(() => null);
+        if (!cache) return [g.gid, { v: null, c: "USD" }] as const;
+        const state = foldEvents(Object.values(cache.events));
         const cur = state.group?.currency ?? "USD";
         const bal = balances(state);
         const kind = state.group?.kind;
@@ -39,7 +43,12 @@ function useMyNets(groups: SavedGroup[] | null, rates: Rates | null) {
             : { kind, v: null, c: cur, why: "rates" as const },
         ] as const;
       }),
-    ).then((rows) => setNets(Object.fromEntries(rows)));
+    ).then((rows) => {
+      if (live) setNets(Object.fromEntries(rows));
+    });
+    return () => {
+      live = false;
+    };
   }, [groups, rates]);
   return nets;
 }
